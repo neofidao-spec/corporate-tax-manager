@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Corporate Tax Manager — Beranda{% endblock %}
 {% block content %}
-<div class="page-header d-flex justify-content-between align-items-center">
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-        <h2><i class="bi bi-house-door me-2 text-copper"></i>Beranda</h2>
-        <div class="subtitle">Ringkasan pajak perusahaan — {{ dash.month }}/{{ dash.year }}</div>
+        <h2>Beranda</h2>
+        <div class="subtitle">Ringkasan pajak perusahaan — periode {{ dash.month }}/{{ dash.year }}</div>
     </div>
 </div>
 
@@ -13,29 +13,29 @@
     <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-cash-stack icon"></i>
+            <div class="label">PPh bulan ini</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_due_this_month) }}</div>
-            <div class="label">PPh Bulan Ini</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-graph-up-arrow icon"></i>
+            <div class="label">Total PPh {{ dash.year }}</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_year) }}</div>
-            <div class="label">Total PPh Tahun {{ dash.year }}</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-receipt icon"></i>
+            <div class="label">Jenis transaksi</div>
             <div class="value">{{ dash.by_type|length }}</div>
-            <div class="label">Jenis Transaksi</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-file-earmark-text icon"></i>
+            <div class="label">Dokumen tercatat</div>
             <div class="value">{{ dash.doc_count }}</div>
-            <div class="label">Dokumen Tercatat</div>
         </div>
     </div>
 </div>
@@ -45,18 +45,19 @@
     <div class="col-md-5">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-bell me-2"></i> Deadline Mendatang
+                <i class="bi bi-bell me-2 text-muted"></i> Deadline mendatang
             </div>
             <div class="card-body p-0">
+                {% if deadlines %}
                 <div class="list-group list-group-flush">
                     {% for d in deadlines %}
                     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                        <div>
+                        <div class="me-3">
                             <div class="fw-semibold">{{ d.title }}</div>
                             <small class="text-muted">{{ d.description }}</small>
                         </div>
                         <div class="text-end">
-                            <div class="fw-semibold" style="font-size: 0.9rem;">{{ d.date }}</div>
+                            <div class="fw-semibold" style="font-size: 0.875rem;">{{ d.date }}</div>
                             <span class="badge badge-deadline
                                 bg-{{ 'danger' if d.status == 'LEWAT' else 'warning' if d.status == 'SEGERA' else 'success' }}">
                                 {{ d.status }}
@@ -65,6 +66,12 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% else %}
+                <div class="empty-state py-4">
+                    <i class="bi bi-calendar-check"></i>
+                    <p class="mb-0">Tidak ada deadline dalam 30 hari ke depan.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -73,9 +80,9 @@
     <div class="col-md-7">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-bar-chart-line me-2"></i> Rincian PPh {{ dash.year }}
+                <i class="bi bi-bar-chart-line me-2 text-muted"></i> Rincian PPh {{ dash.year }}
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if yearly %}
                 <div class="table-responsive">
                     <table class="table table-custom">
@@ -83,16 +90,17 @@
                             <tr>
                                 <th>Bulan</th>
                                 <th>Jenis</th>
-                                <th>Jumlah Transaksi</th>
+                                <th>Jumlah</th>
                                 <th class="text-end">Total PPh</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% set months = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'Mei',6:'Jun',7:'Jul',8:'Agu',9:'Sep',10:'Okt',11:'Nov',12:'Des'} %}
+                            {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
                             {% for r in yearly %}
                             <tr>
                                 <td><span class="badge bg-secondary">{{ months[r.tax_month] }}</span></td>
-                                <td><code>{{ r.tax_code }}</code></td>
+                                <td>{{ labels.get(r.tax_code, r.tax_code) }}</td>
                                 <td>{{ r.count }}</td>
                                 <td class="text-end fw-semibold">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
                             </tr>
@@ -104,7 +112,7 @@
                 <div class="empty-state">
                     <i class="bi bi-bar-chart"></i>
                     <p>Belum ada data transaksi untuk tahun ini.</p>
-                    <a href="/withholding" class="btn btn-copper btn-sm">Mulai Catat Transaksi</a>
+                    <a href="/withholding" class="btn btn-copper btn-sm">Mulai catat transaksi</a>
                 </div>
                 {% endif %}
             </div>
@@ -113,38 +121,30 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="row g-2">
-                    <div class="col-md-3 col-6">
-                        <a href="/calculator" class="btn btn-copper w-100 py-3">
-                            <i class="bi bi-calculator d-block fs-4 mb-1"></i>
-                            <span class="small">Kalkulator Pajak</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a href="/withholding" class="btn btn-outline-copper w-100 py-3">
-                            <i class="bi bi-plus-circle d-block fs-4 mb-1"></i>
-                            <span class="small">Catat PPh 23/26</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a href="/documents" class="btn btn-outline-copper w-100 py-3">
-                            <i class="bi bi-file-earmark-plus d-block fs-4 mb-1"></i>
-                            <span class="small">Tambah Dokumen</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6">
-                        <a href="/withholding/export" class="btn btn-outline-copper w-100 py-3">
-                            <i class="bi bi-download d-block fs-4 mb-1"></i>
-                            <span class="small">Export Data</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="row mt-4 g-3">
+    <div class="col-md-3 col-6">
+        <a href="/calculator" class="btn btn-copper btn-action w-100">
+            <i class="bi bi-calculator"></i>
+            <span class="small">Kalkulator pajak</span>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a href="/withholding" class="btn btn-outline-copper btn-action w-100">
+            <i class="bi bi-plus-circle"></i>
+            <span class="small">Catat PPh 23/26</span>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a href="/documents" class="btn btn-outline-copper btn-action w-100">
+            <i class="bi bi-file-earmark-plus"></i>
+            <span class="small">Tambah dokumen</span>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a href="/withholding/export" class="btn btn-outline-copper btn-action w-100">
+            <i class="bi bi-download"></i>
+            <span class="small">Export data</span>
+        </a>
     </div>
 </div>
 {% endblock %}
