@@ -29,6 +29,7 @@ from kivy.graphics import Color, RoundedRectangle
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
 from data.app_prefs import APP_VERSION, load_prefs as _load_prefs, save_prefs as _save_prefs, prefs_path as _prefs_path_impl
+from data.export_utils import export_pph21_csv
 
 # ═══════════════════════════════════════════════════════════
 # THEME — Neutral (eye-friendly, matches web)
@@ -565,9 +566,14 @@ class Pph21Screen(BaseScreen):
         super().__init__('pph21', 'Log PPh 21', **kwargs)
 
     def build_ui(self):
-        add_btn = make_button('+ Tambah PPh 21', height=40)
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        add_btn = make_button('+ Tambah', PRIMARY, WHITE, 40)
         add_btn.bind(on_release=lambda _b: self.show_add_popup())
-        self.body.add_widget(add_btn)
+        export_btn = make_button('Export CSV', SURFACE_MUTED, TEXT, 40)
+        export_btn.bind(on_release=lambda _b: self.export_csv())
+        actions.add_widget(add_btn)
+        actions.add_widget(export_btn)
+        self.body.add_widget(actions)
 
         try:
             rows, total = TaxDB().get_pph21_log(limit=50)
@@ -592,6 +598,39 @@ class Pph21Screen(BaseScreen):
             card.add_widget(make_label(f'{left}\n{period}', 11, TEXT, True, 'left', 42))
             card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right', 42))
             self.body.add_widget(card)
+
+    def _export_dir(self):
+        try:
+            app = App.get_running_app()
+            if app and getattr(app, 'user_data_dir', None):
+                return os.path.join(app.user_data_dir, 'exports')
+        except Exception:
+            pass
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exports')
+
+    def export_csv(self):
+        try:
+            rows, _ = TaxDB().get_pph21_log(limit=10000)
+            if not rows:
+                raise ValueError('Belum ada data PPh 21 untuk diekspor')
+            path, count, total = export_pph21_csv(rows, self._export_dir())
+            msg = (
+                f'CSV tersimpan\n{count} baris · total PPh Rp {total:,.0f}\n\n'
+                f'{path}'
+            )
+            popup = Popup(
+                title='Export PPh 21',
+                content=make_label(msg, 12, TEXT, False, 'left', 140),
+                size_hint=(0.92, 0.42),
+            )
+            popup.open()
+        except Exception as exc:
+            err = Popup(
+                title='Export gagal',
+                content=make_label(str(exc), 12, ERROR, False, 'center', 80),
+                size_hint=(0.85, 0.32),
+            )
+            err.open()
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))

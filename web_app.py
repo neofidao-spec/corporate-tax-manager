@@ -358,26 +358,15 @@ def create_app(testing=False):
 
     @app.route('/pph21/export')
     def export_pph21():
+        from data.export_utils import pph21_csv_rows, render_csv
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         q = (request.args.get('q') or '').strip() or None
         records, _ = g.db.get_pph21_log(
             limit=10000, offset=0, year=year, month=month, q=q,
         )
-        output = StringIO()
-        w = csv.writer(output)
-        w.writerow([
-            'ID', 'Pegawai', 'Gaji Bruto', 'Tanggungan', 'PTKP',
-            'PPh 21', 'Tahun', 'Bulan', 'Tgl Input',
-        ])
-        for r in records:
-            w.writerow([
-                r['id'], r['employee_name'], r['gross_salary'], r['dependents'],
-                r['ptkp_status'], r['pph21_amount'], r['period_year'],
-                r['period_month'], r['created_at'],
-            ])
         return Response(
-            output.getvalue(),
+            render_csv(pph21_csv_rows(records)),
             mimetype='text/csv',
             headers={'Content-Disposition': 'attachment;filename=pph21_export.csv'},
         )

@@ -757,6 +757,42 @@ class TestWebApp(unittest.TestCase):
             self.assertEqual(load_prefs(path=nested).get('x'), 1)
         self.assertEqual(APP_VERSION, '1.1.2')
 
+    def test_export_utils_pph21_csv(self):
+        from data.export_utils import (
+            pph21_csv_rows, render_csv, export_pph21_csv, default_export_filename,
+        )
+        import tempfile
+        import os
+        sample = [{
+            'id': 1,
+            'employee_name': 'Budi',
+            'gross_salary': 15000000,
+            'dependents': 0,
+            'ptkp_status': 'TK0',
+            'pph21_amount': 250000,
+            'period_year': 2026,
+            'period_month': 7,
+            'created_at': '2026-07-22',
+        }]
+        rows = pph21_csv_rows(sample)
+        self.assertEqual(rows[0][0], 'ID')
+        self.assertEqual(rows[1][1], 'Budi')
+        csv_text = render_csv(rows)
+        self.assertIn('Budi', csv_text)
+        self.assertIn('250000', csv_text)
+        with tempfile.TemporaryDirectory() as td:
+            path, count, total = export_pph21_csv(sample, td)
+            self.assertTrue(os.path.exists(path))
+            self.assertEqual(count, 1)
+            self.assertEqual(total, 250000.0)
+            self.assertTrue(path.endswith('.csv'))
+        self.assertTrue(default_export_filename().startswith('pph21_export_'))
+
+        # Web export still works via shared helper
+        r = self.client.get('/pph21/export')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('text/csv', r.content_type)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
