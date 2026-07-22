@@ -827,6 +827,62 @@ class TestWebApp(unittest.TestCase):
             self.assertEqual(r.status_code, 200, path)
             self.assertIn('text/csv', r.content_type, path)
 
+    def test_share_utils_fallback(self):
+        from data.share_utils import (
+            build_share_message, try_android_share_file,
+            try_clipboard_copy, share_or_copy,
+        )
+        import tempfile
+        import os
+
+        msg = build_share_message('/tmp/demo.csv', 'Export CSV')
+        self.assertIn('demo.csv', msg)
+        self.assertIn('/tmp/demo.csv', msg)
+
+        # missing file
+        ok, detail = try_android_share_file('/no/such/file.csv')
+        self.assertFalse(ok)
+
+        # forced share failure → clipboard success
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'sample.csv')
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write('a,b\n1,2\n')
+
+            def boom(_name):
+                raise RuntimeError('no jnius')
+
+            bucket = {}
+
+            def fake_copy(text):
+                bucket['text'] = text
+
+            ok, mode = try_android_share_file(path, jnius_autoclass=boom)
+            self.assertFalse(ok)
+            cop_ok, cop_mode = try_clipboard_copy('hello', clipboard_paste=fake_copy)
+            self.assertTrue(cop_ok)
+            self.assertEqual(bucket['text'], 'hello')
+
+            result = share_or_copy(
+                path,
+                title='Export CSV',
+                jnius_autoclass=boom,
+                clipboard_paste=fake_copy,
+            )
+            self.assertTrue(result['copied'])
+            self.assertEqual(result['mode'], 'clipboard')
+            self.assertIn('sample.csv', result['message'])
+
+            # path_only when both fail
+            result2 = share_or_copy(
+                path,
+                jnius_autoclass=boom,
+                clipboard_paste=lambda _t: (_ for _ in ()).throw(RuntimeError('clip fail')),
+            )
+            self.assertEqual(result2['mode'], 'path_only')
+            self.assertFalse(result2['shared'])
+            self.assertFalse(result2['copied'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

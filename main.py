@@ -34,6 +34,7 @@ from data.export_utils import (
     export_withholding_csv,
     export_period_report_csv,
 )
+from data.share_utils import share_or_copy
 
 # ═══════════════════════════════════════════════════════════
 # THEME — Neutral (eye-friendly, matches web)
@@ -504,12 +505,41 @@ def _android_export_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exports')
 
 
-def _show_export_result(title, msg, error=False):
-    popup = Popup(
-        title=title,
-        content=make_label(msg, 12, ERROR if error else TEXT, False, 'left' if not error else 'center', 140 if not error else 80),
-        size_hint=(0.92, 0.42 if not error else 0.32),
-    )
+def _show_export_result(title, msg, error=False, path=None):
+    """Show export result. When path is set, offer Bagikan (share sheet / clipboard)."""
+    content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(14))
+    content.add_widget(make_label(
+        msg, 12, ERROR if error else TEXT, False,
+        'left' if not error else 'center', 140 if not error else 80,
+    ))
+    actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+    popup = Popup(title=title, content=content, size_hint=(0.92, 0.48 if path and not error else 0.42 if not error else 0.32))
+
+    if path and not error:
+        share_btn = make_button('Bagikan', PRIMARY, WHITE, 38)
+
+        def do_share(_btn):
+            result = share_or_copy(path, title=title)
+            if result.get('shared'):
+                status = 'Dibuka di menu bagikan Android'
+            elif result.get('copied'):
+                status = 'Path disalin ke clipboard'
+            else:
+                status = f"Share tidak tersedia\n{path}"
+            info = Popup(
+                title='Bagikan',
+                content=make_label(status, 12, TEXT, False, 'left', 90),
+                size_hint=(0.88, 0.32),
+            )
+            info.open()
+
+        share_btn.bind(on_release=do_share)
+        actions.add_widget(share_btn)
+
+    close_btn = make_button('Tutup', SURFACE_MUTED, TEXT, 38)
+    close_btn.bind(on_release=lambda _b: popup.dismiss())
+    actions.add_widget(close_btn)
+    content.add_widget(actions)
     popup.open()
 
 
@@ -556,7 +586,7 @@ class WithholdingScreen(BaseScreen):
                 f'CSV tersimpan\n{count} baris · total PPh Rp {total:,.0f}\n\n'
                 f'{path}'
             )
-            _show_export_result('Export PPh 23/26', msg)
+            _show_export_result('Export PPh 23/26', msg, path=path)
         except Exception as exc:
             _show_export_result('Export gagal', str(exc), error=True)
 
@@ -651,7 +681,7 @@ class Pph21Screen(BaseScreen):
                 f'CSV tersimpan\n{count} baris · total PPh Rp {total:,.0f}\n\n'
                 f'{path}'
             )
-            _show_export_result('Export PPh 21', msg)
+            _show_export_result('Export PPh 21', msg, path=path)
         except Exception as exc:
             _show_export_result('Export gagal', str(exc), error=True)
 
@@ -1233,7 +1263,7 @@ class ReportScreen(BaseScreen):
                 f'CSV tersimpan\n{count} baris rincian · total PPh Rp {total:,.0f}\n'
                 f'Periode {self.view_month:02d}/{self.view_year}\n\n{path}'
             )
-            _show_export_result('Export Laporan', msg)
+            _show_export_result('Export Laporan', msg, path=path)
         except Exception as exc:
             _show_export_result('Export gagal', str(exc), error=True)
 
