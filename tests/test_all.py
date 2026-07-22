@@ -710,6 +710,19 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'app-content-ready', r.data)
         self.assertIn(b'v1.1.1', r.data)
 
+    def test_accessibility_landmarks(self):
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'skip-link', r.data)
+        self.assertIn(b'Loncat ke konten utama', r.data)
+        self.assertIn(b'id="main-content"', r.data)
+        self.assertIn(b'aria-label="Navigasi utama"', r.data)
+        self.assertIn(b'aria-current="page"', r.data)
+        self.assertIn(b'aria-busy="true"', r.data)
+        self.assertIn(b'prefers-reduced-motion', r.data)
+        # active home page should mark beranda as current
+        self.assertIn(b'href="/"\n                           aria-current="page"', r.data.replace(b'\r', b'') or b'aria-current="page"')
+
     def test_android_prefs_helpers(self):
         from data.app_prefs import APP_VERSION, load_prefs, save_prefs, prefs_path
         import tempfile

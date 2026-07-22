@@ -886,58 +886,126 @@
             .cal-day { height: 56px; }
             .app-main { padding-top: 1rem; }
         }
+
+        /* ── Accessibility ── */
+        .skip-link {
+            position: absolute;
+            left: 0.75rem;
+            top: -3rem;
+            z-index: 2000;
+            background: var(--primary);
+            color: #fff;
+            padding: 0.55rem 0.85rem;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: top 0.15s ease;
+        }
+        .skip-link:focus {
+            top: 0.75rem;
+            color: #fff;
+            box-shadow: var(--focus-ring);
+        }
+        .visually-hidden-focusable:not(:focus):not(:focus-within) {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .skeleton-line,
+            .skeleton-block {
+                animation: none !important;
+            }
+            .btn-action:hover {
+                transform: none;
+            }
+        }
+        body.is-loading {
+            cursor: progress;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="is-loading">
-    <nav class="navbar navbar-expand-lg sticky-top">
+<body class="is-loading" aria-busy="true">
+    <a class="skip-link visually-hidden-focusable" href="#main-content">Loncat ke konten utama</a>
+    <nav class="navbar navbar-expand-lg sticky-top" aria-label="Navigasi utama">
         <div class="container app-main py-0">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-shield-check"></i> Corporate Tax
+            <a class="navbar-brand" href="/" aria-label="Corporate Tax Manager — Beranda">
+                <i class="bi bi-shield-check" aria-hidden="true"></i> Corporate Tax
             </a>
-            <button class="navbar-toggler border" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
-                <i class="bi bi-list"></i>
+            <button class="navbar-toggler border" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Buka menu navigasi">
+                <i class="bi bi-list" aria-hidden="true"></i>
             </button>
             <div class="collapse navbar-collapse" id="navMain">
                 <ul class="navbar-nav ms-auto gap-1 align-items-lg-center">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
-                            <i class="bi bi-house-door"></i> Beranda
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}"
+                           href="/"
+                           {% if request.path == '/' %}aria-current="page"{% endif %}>
+                            <i class="bi bi-house-door" aria-hidden="true"></i> Beranda
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/calculator') %}active{% endif %}" href="/calculator">
-                            <i class="bi bi-calculator"></i> Kalkulator
+                        <a class="nav-link {% if request.path.startswith('/calculator') %}active{% endif %}"
+                           href="/calculator"
+                           {% if request.path.startswith('/calculator') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-calculator" aria-hidden="true"></i> Kalkulator
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/withholding') %}active{% endif %}" href="/withholding">
-                            <i class="bi bi-receipt"></i> PPh 23/26
+                        <a class="nav-link {% if request.path.startswith('/withholding') %}active{% endif %}"
+                           href="/withholding"
+                           {% if request.path.startswith('/withholding') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-receipt" aria-hidden="true"></i> PPh 23/26
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/pph21') %}active{% endif %}" href="/pph21">
-                            <i class="bi bi-people"></i> PPh 21
+                        <a class="nav-link {% if request.path.startswith('/pph21') %}active{% endif %}"
+                           href="/pph21"
+                           {% if request.path.startswith('/pph21') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-people" aria-hidden="true"></i> PPh 21
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}" href="/reports/period">
-                            <i class="bi bi-bar-chart"></i> Laporan
+                        <a class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}"
+                           href="/reports/period"
+                           {% if request.path.startswith('/reports') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i> Laporan
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/documents') %}active{% endif %}" href="/documents">
-                            <i class="bi bi-folder2"></i> Dokumen
+                        <a class="nav-link {% if request.path.startswith('/documents') %}active{% endif %}"
+                           href="/documents"
+                           {% if request.path.startswith('/documents') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-folder2" aria-hidden="true"></i> Dokumen
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/calendar') %}active{% endif %}" href="/calendar">
-                            <i class="bi bi-calendar3"></i> Kalender
+                        <a class="nav-link {% if request.path.startswith('/calendar') %}active{% endif %}"
+                           href="/calendar"
+                           {% if request.path.startswith('/calendar') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-calendar3" aria-hidden="true"></i> Kalender
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
-                        <button type="button" id="densityToggle" class="density-toggle" aria-pressed="false" title="Ubah kepadatan tampilan">
-                            <i class="bi bi-arrows-collapse"></i>
+                        <button type="button" id="densityToggle" class="density-toggle"
+                                aria-pressed="false"
+                                aria-label="Ubah kepadatan tampilan"
+                                title="Ubah kepadatan tampilan">
+                            <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
                             <span id="densityToggleLabel">Ringkas</span>
                         </button>
                     </li>
@@ -947,7 +1015,8 @@
     </nav>
 
     <div class="container app-main">
-        <div class="skeleton" id="pageSkeleton" aria-hidden="true">
+        <div class="skeleton" id="pageSkeleton" aria-hidden="true" role="status">
+            <span class="visually-hidden">Memuat halaman…</span>
             <div class="skeleton-kpi">
                 <div class="skeleton-block"></div>
                 <div class="skeleton-block"></div>
@@ -975,22 +1044,24 @@
             </div>
         </div>
 
-        <div class="app-content-ready">
+        <main id="main-content" class="app-content-ready" tabindex="-1">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
+        <div class="flash-region" role="region" aria-label="Notifikasi sistem" aria-live="polite">
         {% for category, message in messages %}
         <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' }}
-                    alert-dismissible fade show d-flex align-items-center" role="alert">
-            <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                    alert-dismissible fade show d-flex align-items-center" role="status">
+            <i class="bi bi-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2" aria-hidden="true"></i>
             <div>{{ message }}</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup notifikasi"></button>
         </div>
         {% endfor %}
+        </div>
         {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
-        </div>
+        </main>
     </div>
 
     <footer class="footer">
@@ -1013,6 +1084,10 @@
             body.classList.toggle('density-compact', compact);
             if (btn) {
                 btn.setAttribute('aria-pressed', compact ? 'true' : 'false');
+                btn.setAttribute(
+                    'aria-label',
+                    compact ? 'Ubah ke tampilan lega' : 'Ubah ke tampilan ringkas'
+                );
             }
             if (label) {
                 label.textContent = compact ? 'Lega' : 'Ringkas';
@@ -1035,6 +1110,11 @@
 
         function reveal() {
             body.classList.remove('is-loading');
+            body.setAttribute('aria-busy', 'false');
+            var sk = document.getElementById('pageSkeleton');
+            if (sk) {
+                sk.setAttribute('aria-hidden', 'true');
+            }
         }
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
             setTimeout(reveal, 120);
