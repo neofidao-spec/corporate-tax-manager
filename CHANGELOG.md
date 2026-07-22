@@ -5,6 +5,17 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.1.3] — 2026-07-22
+
+### Added
+- Shared CSV export helpers (`data/export_utils.py`) untuk PPh 21, withholding, laporan periode
+- Android **Export CSV** di PPh 21, Log PPh 23/26, dan Laporan Periode
+- File export tersimpan di `user_data_dir/exports/` (popup path + total)
+
+### Changed
+- Web `/pph21/export`, `/withholding/export`, `/reports/period/export` memakai helper yang sama
+- `buildozer.spec` / footer version → `1.1.3`
+
 ## [1.1.2] — 2026-07-22
 
 ### Added
