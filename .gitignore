@@ -25,3 +25,4 @@ tax_data.db
 # OS
 .DS_Store
 Thumbs.db
+test_tax.db

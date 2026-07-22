@@ -1,30 +1,58 @@
 {% extends "base.html" %}
+{% block title %}Log PPh 23/26{% endblock %}
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h2 class="fw-bold" style="color: var(--navy);">Log PPh 23/26</h2>
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <div>
+        <h2><i class="bi bi-receipt me-2 text-copper"></i>Log PPh 23/26</h2>
+        <div class="subtitle">Catat dan kelola transaksi potongan PPh &mdash; {{ total }} data</div>
     </div>
-    <div class="col-md-4 text-end">
+    <div class="d-flex gap-2">
+        <a href="/withholding/export" class="btn btn-outline-copper"><i class="bi bi-download"></i> Export CSV</a>
         <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-            + Tambah Potongan
+            <i class="bi bi-plus-lg"></i> Tambah
         </button>
     </div>
 </div>
 
+<!-- Filter -->
+<div class="card mb-3 filter-form">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <select name="tax_code" class="form-select form-select-sm">
+                <option value="">Semua Jenis</option>
+                <option value="pph23" {% if tax_code == 'pph23' %}selected{% endif %}>PPh 23</option>
+                <option value="pph26" {% if tax_code == 'pph26' %}selected{% endif %}>PPh 26</option>
+                <option value="pph_final" {% if tax_code == 'pph_final' %}selected{% endif %}>PPh Final</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="number" name="year" class="form-control form-control-sm" placeholder="Tahun" value="{{ year or '' }}" style="width: 80px;">
+        </div>
+        <div class="col-auto">
+            <input type="number" name="month" class="form-control form-control-sm" placeholder="Bulan" value="{{ month or '' }}" style="width: 80px;" min="1" max="12">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-copper"><i class="bi bi-funnel"></i> Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
 <div class="card">
-    <div class="card-header py-3">Data Potongan PPh 23/26</div>
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if records %}
         <div class="table-responsive">
-            <table class="table table-hover table-custom">
+            <table class="table table-custom mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Vendor</th>
                         <th>Jumlah Bruto</th>
                         <th>Jenis</th>
+                        <th>Kode</th>
                         <th>PPh</th>
-                        <th>Tanggal</th>
+                        <th>Keterangan</th>
+                        <th>Tgl</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -32,66 +60,109 @@
                     {% for r in records %}
                     <tr>
                         <td>{{ r.id }}</td>
-                        <td>{{ r.vendor }}</td>
+                        <td class="fw-semibold">{{ r.vendor }}</td>
                         <td>Rp {{ "{:,.0f}".format(r.amount) }}</td>
-                        <td>{{ r.obj_type }}</td>
-                        <td><strong>Rp {{ "{:,.0f}".format(r.pph_amount) }}</strong></td>
-                        <td>{{ r.created_at[:10] }}</td>
+                        <td><span class="badge bg-secondary">{{ r.obj_type }}</span></td>
+                        <td><code>{{ r.tax_code }}</code></td>
+                        <td class="fw-bold text-{{ 'danger' if r.pph_amount > 10000000 else 'dark' }}">
+                            Rp {{ "{:,.0f}".format(r.pph_amount) }}
+                        </td>
+                        <td><small class="text-muted">{{ r.description[:40] if r.description else '-' }}</small></td>
+                        <td><small>{{ r.created_at[:10] }}</small></td>
                         <td>
-                            <a href="{{ url_for('delete_withholding', rid=r.id) }}" class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Hapus data ini?')">Hapus</a>
+                            <a href="/withholding/delete/{{ r.id }}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Hapus data ini?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center p-3">
+            <nav>
+                <ul class="pagination pagination-sm">
+                    {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {{ 'active' if p == page }}">
+                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if tax_code %}&tax_code={{ tax_code }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
         {% else %}
-        <p class="text-muted text-center py-4">Belum ada data potongan PPh 23/26. Tambahkan potongan pertama Anda.</p>
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p>Belum ada data transaksi.</p>
+            <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
+                <i class="bi bi-plus-lg"></i> Tambah Potongan Pertama
+            </button>
+        </div>
         {% endif %}
     </div>
 </div>
 
 <!-- Modal Tambah -->
 <div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form action="{{ url_for('add_withholding') }}" method="POST">
-                <div class="modal-header" style="background: var(--navy); color: var(--cream);">
-                    <h5 class="modal-title">Tambah Potongan PPh</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <form action="/withholding/add" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i> Tambah Potongan PPh</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Vendor / Penerima</label>
-                        <input type="text" name="vendor" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Jumlah Bruto (Rp)</label>
-                        <input type="number" name="amount" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Jenis Objek</label>
-                        <select name="obj_type" class="form-select">
-                            <option>Jasa</option>
-                            <option>Sewa</option>
-                            <option>Dividen</option>
-                            <option>Bunga</option>
-                            <option>Royalti</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tarif</label>
-                        <select name="tariff" class="form-select">
-                            <option value="2%">2% (Jasa/Sewa)</option>
-                            <option value="15%">15% (Dividen/Bunga/Royalti)</option>
-                            <option value="20%">20% (PPh 26)</option>
-                        </select>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Vendor / Penerima <span class="text-danger">*</span></label>
+                            <input type="text" name="vendor" class="form-control" placeholder="PT Mitra Karya" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Jumlah Bruto (Rp) <span class="text-danger">*</span></label>
+                            <input type="number" name="amount" class="form-control" placeholder="50.000.000" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Jenis Objek</label>
+                            <select name="obj_type" class="form-select">
+                                <option>Jasa</option>
+                                <option>Sewa</option>
+                                <option>Dividen</option>
+                                <option>Bunga</option>
+                                <option>Royalti</option>
+                                <option>Hadiah</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Jenis Pajak</label>
+                            <select name="tax_code" class="form-select">
+                                <option value="pph23">PPh 23 (WPDN)</option>
+                                <option value="pph26">PPh 26 (WPLN)</option>
+                                <option value="pph_final">PPh Final</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tarif</label>
+                            <select name="tariff" class="form-select">
+                                <option value="2%">2% (Jasa/Sewa PPh 23)</option>
+                                <option value="15%">15% (Dividen/Bunga/Royalti)</option>
+                                <option value="20%">20% (PPh 26)</option>
+                                <option value="10%">10% (Sewa Final)</option>
+                                <option value="0.5%">0.5% (PP 23)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Keterangan</label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Deskripsi transaksi"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-copper">Simpan</button>
+                    <button type="submit" class="btn btn-copper"><i class="bi bi-check-lg"></i> Simpan</button>
                 </div>
             </form>
         </div>

@@ -1,85 +1,211 @@
 {% extends "base.html" %}
+{% block title %}Kalkulator Pajak{% endblock %}
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h2 class="fw-bold" style="color: var(--navy);">Kalkulator Pajak</h2>
-        <hr class="opacity-25">
-    </div>
+<div class="page-header">
+    <h2><i class="bi bi-calculator me-2 text-copper"></i>Kalkulator Pajak</h2>
+    <div class="subtitle">Hitung PPh 21, 23, 26, PPN, PPh Badan, PPh Final, dan lainnya</div>
 </div>
 
-<ul class="nav nav-tabs mb-3" id="calcTabs" role="tablist">
+<ul class="nav nav-tabs" id="calcTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if calc_type == 'pph21' else '' }}" id="tab-pph21" data-bs-toggle="tab" data-bs-target="#pph21" type="button">PPh 21</button>
+        <button class="nav-link {{ 'active' if calc_type.startswith('pph21') else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-pph21">PPh 21</button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if calc_type == 'pph23' else '' }}" id="tab-pph23" data-bs-toggle="tab" data-bs-target="#pph23" type="button">PPh 23</button>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if calc_type == 'pph23' else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-pph23">PPh 23</button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if calc_type == 'ppn' else '' }}" id="tab-ppn" data-bs-toggle="tab" data-bs-target="#ppn" type="button">PPN</button>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if calc_type == 'pph26' else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-pph26">PPh 26</button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if calc_type == 'pph_badan' else '' }}" id="tab-badan" data-bs-toggle="tab" data-bs-target="#pph-badan" type="button">PPh Badan</button>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if calc_type == 'ppn' else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-ppn">PPN</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if calc_type == 'pph_badan' else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-badan">PPh Badan</button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link {{ 'active' if calc_type.startswith('pph_final') else '' }}"
+                data-bs-toggle="tab" data-bs-target="#tab-final">PPh Final</button>
     </li>
 </ul>
 
 <div class="tab-content">
     <!-- PPh 21 -->
-    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph21' else '' }}" id="pph21">
+    <div class="tab-pane fade {{ 'show active' if calc_type.startswith('pph21') else '' }}" id="tab-pph21">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header light">Pegawai Tetap</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph21">
+                            <div class="mb-3">
+                                <label class="form-label">Gaji Bruto per Bulan (Rp)</label>
+                                <input type="number" name="gross" class="form-control"
+                                       placeholder="15.000.000" value="{{ request.form.gross or '' }}" required min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Status PTKP</label>
+                                <select name="ptkp_status" class="form-select">
+                                    <option value="TK0">TK/0 — Lajang tanpa tanggungan</option>
+                                    <option value="TK1">TK/1 — Lajang 1 tanggungan</option>
+                                    <option value="TK2" selected>TK/2 — Lajang 2 tanggungan</option>
+                                    <option value="TK3">TK/3 — Lajang 3 tanggungan</option>
+                                    <option value="K0">K/0 — Kawin tanpa tanggungan</option>
+                                    <option value="K1">K/1 — Kawin 1 tanggungan</option>
+                                    <option value="K2">K/2 — Kawin 2 tanggungan</option>
+                                    <option value="K3">K/3 — Kawin 3 tanggungan</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-copper w-100">
+                                <i class="bi bi-calculator"></i> Hitung PPh 21
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header light">Bukan Pegawai</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph21_nonpegawai">
+                            <div class="mb-3">
+                                <label class="form-label">Penghasilan Bruto per Bulan (Rp)</label>
+                                <input type="number" name="gross_non" class="form-control" placeholder="20.000.000" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Status PTKP</label>
+                                <select name="ptkp_status_non" class="form-select">
+                                    <option value="TK0">TK/0</option>
+                                    <option value="K1">K/1</option>
+                                    <option value="K2">K/2</option>
+                                    <option value="K3">K/3</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-outline-copper w-100">
+                                <i class="bi bi-calculator"></i> Hitung
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if calc_type.startswith('pph21') and results %}
+        <div class="result-box mt-3">
+            <div class="fw-bold mb-2" style="color: var(--navy);">
+                <i class="bi bi-check-circle text-copper me-1"></i> Hasil PPh 21 {{ 'Non Pegawai' if 'non' in calc_type else 'Pegawai Tetap' }}
+            </div>
+            <div class="value-line"><span>Status PTKP</span><span>{{ results.status }}</span></div>
+            <div class="value-line"><span>PTKP</span><span>Rp {{ "{:,.0f}".format(results.ptkp) }}</span></div>
+            <div class="value-line"><span>PKP</span><span>Rp {{ "{:,.0f}".format(results.pkp) }}</span></div>
+            {% if 'biaya_jabatan' in results %}
+            <div class="value-line"><span>Biaya Jabatan/Tahun</span><span>Rp {{ "{:,.0f}".format(results.biaya_jabatan) }}</span></div>
+            {% endif %}
+            <div class="value-line total">
+                <span>PPh 21 per Bulan</span>
+                <span>Rp {{ "{:,.0f}".format(results.pph_monthly) }}</span>
+            </div>
+            <div class="value-line"><span>PPh 21 Setahun</span><span>Rp {{ "{:,.0f}".format(results.pph_yearly) }}</span></div>
+            {% if 'take_home_pay' in results %}
+            <div class="value-line"><span>Take Home Pay</span><span>Rp {{ "{:,.0f}".format(results.take_home_pay) }}</span></div>
+            {% endif %}
+            <div class="value-line"><span>Metode</span><span class="text-muted">{{ results.metode }}</span></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PPh 23 -->
+    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph23' else '' }}" id="tab-pph23">
         <div class="card">
             <div class="card-body">
                 <form method="POST">
-                    <input type="hidden" name="calc_type" value="pph21">
-                    <div class="mb-3">
-                        <label class="form-label">Gaji Bruto per Bulan (Rp)</label>
-                        <input type="number" name="gross" class="form-control" placeholder="Contoh: 15000000" required>
+                    <input type="hidden" name="calc_type" value="pph23">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nilai Bruto (Rp)</label>
+                            <input type="number" name="amount" class="form-control" placeholder="50.000.000" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Jenis Objek</label>
+                            <select name="obj_type" class="form-select">
+                                <option value="Jasa">Jasa (2%)</option>
+                                <option value="Sewa">Sewa (2%)</option>
+                                <option value="Dividen">Dividen (15%) — final WP OP</option>
+                                <option value="Bunga">Bunga (15%)</option>
+                                <option value="Royalti">Royalti (15%)</option>
+                                <option value="Hadiah">Hadiah (15%)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-copper w-100"><i class="bi bi-calculator"></i> Hitung</button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Jumlah Tanggungan (0-3)</label>
-                        <input type="number" name="dependents" class="form-control" value="0" min="0" max="3">
-                    </div>
-                    <button type="submit" class="btn btn-copper">Hitung PPh 21</button>
                 </form>
-                {% if result and calc_type == 'pph21' %}
+                {% if calc_type == 'pph23' and results %}
                 <div class="result-box">
-                    <strong>Hasil Perhitungan PPh 21 Masa:</strong><br>
-                    PTKP: Rp {{ "{:,.0f}".format(result.ptkp) }}<br>
-                    PKP: Rp {{ "{:,.0f}".format(result.pkp) }}<br>
-                    <strong>PPh 21 per Bulan: Rp {{ "{:,.0f}".format(result.pph_monthly) }}</strong><br>
-                    PPh 21 Setahun: Rp {{ "{:,.0f}".format(result.pph_yearly) }}
+                    <div class="value-line"><span>Dasar Pengenaan</span><span>Rp {{ "{:,.0f}".format(results.dasar_pengenaan) }}</span></div>
+                    <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+                    <div class="value-line total">
+                        <span>PPh 23 Terutang</span>
+                        <span>Rp {{ "{:,.0f}".format(results.pph) }}</span>
+                    </div>
+                    <div class="value-line"><span>Dibayarkan ke Penerima</span><span>Rp {{ "{:,.0f}".format(results.diterima) }}</span></div>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- PPh 23 -->
-    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph23' else '' }}" id="pph23">
+    <!-- PPh 26 -->
+    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph26' else '' }}" id="tab-pph26">
         <div class="card">
             <div class="card-body">
                 <form method="POST">
-                    <input type="hidden" name="calc_type" value="pph23">
-                    <div class="mb-3">
-                        <label class="form-label">Nilai Bruto (Rp)</label>
-                        <input type="number" name="amount" class="form-control" placeholder="Contoh: 50000000" required>
+                    <input type="hidden" name="calc_type" value="pph26">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Nilai Bruto (Rp)</label>
+                            <input type="number" name="amount_26" class="form-control" placeholder="100.000.000" min="0" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Jenis Objek</label>
+                            <select name="obj_type_26" class="form-select">
+                                <option>Jasa</option>
+                                <option>Dividen</option>
+                                <option>Bunga</option>
+                                <option>Royalti</option>
+                                <option>Hadiah</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="have_npwp" id="npwp_26">
+                                <label class="form-check-label" for="npwp_26">Punya NPWP</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-copper w-100"><i class="bi bi-calculator"></i> Hitung</button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Jenis Objek</label>
-                        <select name="obj_type" class="form-select">
-                            <option value="Jasa">Jasa (2%)</option>
-                            <option value="Sewa">Sewa (2%)</option>
-                            <option value="Dividen">Dividen (15%)</option>
-                            <option value="Bunga">Bunga (15%)</option>
-                            <option value="Royalti">Royalti (15%)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-copper">Hitung PPh 23</button>
                 </form>
-                {% if result and calc_type == 'pph23' %}
+                {% if calc_type == 'pph26' and results %}
                 <div class="result-box">
-                    <strong>Hasil Perhitungan PPh 23:</strong><br>
-                    Tarif: {{ (result.rate * 100)|int }}%<br>
-                    PPh 23: <strong>Rp {{ "{:,.0f}".format(result.pph) }}</strong><br>
-                    Dibayarkan ke Penerima: Rp {{ "{:,.0f}".format(result.net) }}
+                    <div class="value-line"><span>Jenis Pajak</span><span>{{ results.jenis_pajak }}</span></div>
+                    <div class="value-line"><span>Dasar Pengenaan</span><span>Rp {{ "{:,.0f}".format(results.dasar_pengenaan) }}</span></div>
+                    <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+                    <div class="value-line total">
+                        <span>PPh Terutang</span>
+                        <span>Rp {{ "{:,.0f}".format(results.pph) }}</span>
+                    </div>
+                    <div class="value-line"><span>Dibayarkan</span><span>Rp {{ "{:,.0f}".format(results.diterima) }}</span></div>
+                    {% if results.catatan %}
+                    <div class="value-line"><span>Catatan</span><span class="text-muted">{{ results.catatan }}</span></div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -87,58 +213,216 @@
     </div>
 
     <!-- PPN -->
-    <div class="tab-pane fade {{ 'show active' if calc_type == 'ppn' else '' }}" id="ppn">
+    <div class="tab-pane fade {{ 'show active' if calc_type == 'ppn' else '' }}" id="tab-ppn">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header light">PPN Dalam Negeri</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="ppn">
+                            <div class="mb-3">
+                                <label class="form-label">Harga DPP (Rp)</label>
+                                <input type="number" name="price" class="form-control" placeholder="20.000.000" min="0" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tarif PPN</label>
+                                <select name="tariff" class="form-select">
+                                    <option value="11">11% (saat ini)</option>
+                                    <option value="12">12%</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" name="include_ppn" id="include_ppn">
+                                <label class="form-check-label" for="include_ppn">Harga sudah termasuk PPN</label>
+                            </div>
+                            <button type="submit" class="btn btn-copper w-100"><i class="bi bi-calculator"></i> Hitung PPN</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header light">PPN Impor</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="ppn_impor">
+                            <div class="mb-3">
+                                <label class="form-label">Nilai Impor (CIF) (Rp)</label>
+                                <input type="number" name="nilai_impor" class="form-control" placeholder="100.000.000" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Bea Masuk (Rp)</label>
+                                <input type="number" name="bea_masuk" class="form-control" placeholder="5.000.000" min="0">
+                            </div>
+                            <button type="submit" class="btn btn-outline-copper w-100"><i class="bi bi-calculator"></i> Hitung</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if calc_type == 'ppn' and results %}
+        <div class="result-box mt-3">
+            <div class="value-line"><span>{{ results.status }}</span><span></span></div>
+            <div class="value-line"><span>DPP</span><span>Rp {{ "{:,.0f}".format(results.dpp) }}</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total">
+                <span>PPN Terutang</span>
+                <span>Rp {{ "{:,.0f}".format(results.ppn) }}</span>
+            </div>
+            <div class="value-line"><span>Total (DPP + PPN)</span><span>Rp {{ "{:,.0f}".format(results.total) }}</span></div>
+        </div>
+        {% elif calc_type == 'ppn_impor' and results %}
+        <div class="result-box mt-3">
+            <div class="value-line"><span>Nilai Impor</span><span>Rp {{ "{:,.0f}".format(results.nilai_impor) }}</span></div>
+            <div class="value-line"><span>Bea Masuk</span><span>Rp {{ "{:,.0f}".format(results.bea_masuk) }}</span></div>
+            <div class="value-line"><span>DPP</span><span>Rp {{ "{:,.0f}".format(results.dpp) }}</span></div>
+            <div class="value-line total">
+                <span>PPN Impor</span>
+                <span>Rp {{ "{:,.0f}".format(results.ppn) }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PPh Badan -->
+    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph_badan' else '' }}" id="tab-badan">
         <div class="card">
             <div class="card-body">
                 <form method="POST">
-                    <input type="hidden" name="calc_type" value="ppn">
-                    <div class="mb-3">
-                        <label class="form-label">Harga DPP (Rp)</label>
-                        <input type="number" name="price" class="form-control" placeholder="Contoh: 10000000" required>
+                    <input type="hidden" name="calc_type" value="pph_badan">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Laba Kena Pajak / Penghasilan Neto (Rp)</label>
+                            <input type="number" name="profit" class="form-control" placeholder="500.000.000" min="0" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Peredaran Bruto / Omzet (Rp)</label>
+                            <input type="number" name="omzet" class="form-control" placeholder="3.000.000.000" min="0">
+                            <small class="text-muted">Gunakan untuk menentukan skema: PP 23 / Pasal 31E / Pasal 17</small>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-copper w-100"><i class="bi bi-calculator"></i> Hitung</button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tarif PPN (%)</label>
-                        <select name="tariff" class="form-select">
-                            <option value="11">11% (saat ini)</option>
-                            <option value="12">12%</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-copper">Hitung PPN</button>
                 </form>
-                {% if result and calc_type == 'ppn' %}
+                {% if results and calc_type == 'pph_badan' %}
                 <div class="result-box">
-                    <strong>Hasil Perhitungan PPN:</strong><br>
-                    PPN ({{ result.tariff }}%): <strong>Rp {{ "{:,.0f}".format(result.ppn) }}</strong><br>
-                    Harga + PPN: Rp {{ "{:,.0f}".format(result.total) }}
+                    <div class="value-line"><span>Metode</span><span>{{ results.metode }}</span></div>
+                    <div class="value-line"><span>Omzet</span><span>Rp {{ "{:,.0f}".format(results.dpp_omzet) }}</span></div>
+                    <div class="value-line"><span>Laba Kena Pajak</span><span>Rp {{ "{:,.0f}".format(results.dpp_laba) }}</span></div>
+                    <div class="value-line total">
+                        <span>PPh Badan Terutang</span>
+                        <span>Rp {{ "{:,.0f}".format(results.pph) }}</span>
+                    </div>
+                    <div class="value-line"><span>Tarif Efektif</span><span>{{ results.tarif_efektif }}</span></div>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- PPh Badan -->
-    <div class="tab-pane fade {{ 'show active' if calc_type == 'pph_badan' else '' }}" id="pph-badan">
-        <div class="card">
-            <div class="card-body">
-                <form method="POST">
-                    <input type="hidden" name="calc_type" value="pph_badan">
-                    <div class="mb-3">
-                        <label class="form-label">Laba Kena Pajak (Rp)</label>
-                        <input type="number" name="profit" class="form-control" placeholder="Contoh: 500000000" required>
+    <!-- PPh Final -->
+    <div class="tab-pane fade {{ 'show active' if calc_type.startswith('pph_final') else '' }}" id="tab-final">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header light">Sewa Tanah/Bangunan</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph_final_sewa">
+                            <div class="mb-3">
+                                <label class="form-label">Nilai Sewa per Tahun</label>
+                                <input type="number" name="sewa" class="form-control" placeholder="200.000.000" min="0">
+                            </div>
+                            <button type="submit" class="btn btn-copper w-100">Hitung 10%</button>
+                        </form>
+                        {% if calc_type == 'pph_final_sewa' and results %}
+                        <div class="small mt-2 p-2 bg-light rounded">
+                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
+                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Peredaran Bruto / Omzet (Rp)</label>
-                        <input type="number" name="omzet" class="form-control" placeholder="Contoh: 3000000000">
-                    </div>
-                    <button type="submit" class="btn btn-copper">Hitung PPh Badan</button>
-                </form>
-                {% if result and calc_type == 'pph_badan' %}
-                <div class="result-box">
-                    <strong>Hasil Perhitungan PPh Badan:</strong><br>
-                    Metode: {{ result.method }}<br>
-                    <strong>PPh Badan: Rp {{ "{:,.0f}".format(result.pph) }}</strong>
                 </div>
-                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header light">Jasa Konstruksi</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph_final_konstruksi">
+                            <div class="mb-3">
+                                <label class="form-label">Nilai Kontrak</label>
+                                <input type="number" name="konstruksi_nilai" class="form-control" placeholder="1.000.000.000" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Kualifikasi</label>
+                                <select name="license_rank" class="form-select">
+                                    <option value="kecil">Kecil (2%)</option>
+                                    <option value="menengah">Menengah (3%)</option>
+                                    <option value="lainnya">Lainnya (4%)</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-copper w-100">Hitung</button>
+                        </form>
+                        {% if calc_type == 'pph_final_konstruksi' and results %}
+                        <div class="small mt-2 p-2 bg-light rounded">
+                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
+                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header light">Pesangon</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph_final_pesangon">
+                            <div class="mb-3">
+                                <label class="form-label">Nilai Pesangon</label>
+                                <input type="number" name="pesangon" class="form-control" placeholder="300.000.000" min="0">
+                            </div>
+                            <button type="submit" class="btn btn-copper w-100">Hitung</button>
+                        </form>
+                        {% if calc_type == 'pph_final_pesangon' and results %}
+                        <div class="small mt-2 p-2 bg-light rounded">
+                            <div>Nilai: <strong>Rp {{ "{:,.0f}".format(results.nilai) }}</strong></div>
+                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
+                            <div>Diterima: <strong>Rp {{ "{:,.0f}".format(results.diterima) }}</strong></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header light">PPh 22 Impor</div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="calc_type" value="pph22_impor">
+                            <div class="mb-3">
+                                <label class="form-label">Nilai Impor (CIF)</label>
+                                <input type="number" name="nilai_p22" class="form-control" placeholder="500.000.000" min="0">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="have_api" id="have_api" checked>
+                                <label class="form-check-label" for="have_api">Memiliki API (2,5%)</label>
+                            </div>
+                            <button type="submit" class="btn btn-outline-copper w-100">Hitung</button>
+                        </form>
+                        {% if calc_type == 'pph22_impor' and results %}
+                        <div class="small mt-2 p-2 bg-light rounded">
+                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
+                            <div>PPh 22: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

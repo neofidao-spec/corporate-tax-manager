@@ -1,250 +1,346 @@
 """
-Corporate Tax Manager — Flask Web App
-Akses via browser: http://localhost:5000
+Corporate Tax Manager — Web Application
+Flask app dengan blueprint architecture.
+Membantu tugas bagian pajak perusahaan secara komprehensif.
 """
-import os, sys, sqlite3
+
+import os
+import sys
+import json
 from datetime import datetime, date
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-from flask import g
+from functools import wraps
+from flask import (
+    Flask, render_template, request, redirect, url_for,
+    flash, jsonify, g, send_file, Response,
+)
+from io import StringIO
+import csv
 
-app = Flask(__name__)
-app.secret_key = 'corporate-tax-manager-secret-key'
-app.config['DATABASE'] = os.path.join(os.path.dirname(__file__), 'tax_data.db')
+# Ensure data module is importable
+sys.path.insert(0, os.path.dirname(__file__))
 
+from data.tax_calculator import TaxCalculator
+from data.tax_db import TaxDB
 
-# ─── Database ───
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(app.config['DATABASE'])
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA journal_mode=WAL")
-    return g.db
-
-@app.teardown_appcontext
-def close_db(exception):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
-def init_db():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.executescript("""
-        CREATE TABLE IF NOT EXISTS withholding (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vendor TEXT NOT NULL,
-            amount REAL NOT NULL,
-            obj_type TEXT NOT NULL,
-            tariff_label TEXT DEFAULT '2%',
-            pph_amount REAL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-            tax_year INTEGER NOT NULL DEFAULT (CAST(strftime('%Y', 'now') AS INTEGER)),
-            tax_month INTEGER NOT NULL DEFAULT (CAST(strftime('%m', 'now') AS INTEGER))
-        );
-        CREATE TABLE IF NOT EXISTS documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            category TEXT NOT NULL DEFAULT 'Umum',
-            status TEXT NOT NULL DEFAULT 'Lengkap',
-            notes TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-        );
-    """)
-    conn.commit()
-    conn.close()
+calc = TaxCalculator()
 
 
-# ─── Tax Calculator ───
-def calc_pph21(gross_monthly, dependents=0):
-    dependents = min(dependents, 3)
-    ptkp = 54_000_000 + (4_500_000 * dependents)
-    biaya_jabatan = min(gross_monthly * 0.05 * 12, 6_000_000)
-    iuran_pensiun = min(gross_monthly * 0.01 * 12, 2_400_000)
-    net_year = (gross_monthly * 12) - biaya_jabatan - iuran_pensiun
-    pkp = max(0, net_year - ptkp)
+# ─── App Factory ───
+def create_app(testing=False):
+    app = Flask(__name__)
+    app.secret_key = os.environ.get('SECRET_KEY', 'corporate-tax-mgr-2026')
+    app.config['DATABASE'] = os.path.join(
+        os.path.dirname(__file__), 'tax_data.db')
 
-    lapisan = [
-        (0, 60_000_000, 0.05),
-        (60_000_000, 250_000_000, 0.15),
-        (250_000_000, 500_000_000, 0.25),
-        (500_000_000, 5_000_000_000, 0.30),
-        (5_000_000_000, float('inf'), 0.35),
-    ]
-    pph_year = 0
-    remaining = pkp
-    for lower, upper, rate in lapisan:
-        if remaining <= 0:
-            break
-        bracket = min(remaining, upper - lower)
-        pph_year += bracket * rate
-        remaining -= bracket
-    return {
-        'pph_monthly': round(pph_year / 12, 2),
-        'net_monthly': round(gross_monthly, 2),
-        'ptkp': round(ptkp, 2),
-        'pkp': round(pkp, 2),
-        'pph_yearly': round(pph_year, 2),
-    }
+    if testing:
+        app.config['TESTING'] = True
+        app.config['DATABASE'] = os.path.join(
+            os.path.dirname(__file__), 'test_tax.db')
 
-def calc_pph23(amount, obj_type='Jasa'):
-    tariffs = {'Dividen': 0.15, 'Bunga': 0.15, 'Royalti': 0.15,
-               'Jasa': 0.02, 'Sewa': 0.02, 'Hadiah': 0.15}
-    rate = tariffs.get(obj_type.title(), 0.02)
-    pph = amount * rate
-    return {'pph': round(pph, 2), 'net': round(amount - pph, 2), 'rate': rate}
+    # Init DB on first request
+    with app.app_context():
+        TaxDB(app.config['DATABASE']).init_tables()
 
-def calc_ppn(price, tariff=11):
-    ppn = price * (tariff / 100)
-    return {'ppn': round(ppn, 2), 'total': round(price + ppn, 2), 'tariff': tariff}
+    # ─── Request lifecycle ───
+    @app.before_request
+    def before_request():
+        g.db = TaxDB(app.config['DATABASE'])
 
-def calc_pph_badan(profit, omzet):
-    if omzet <= 4_800_000_000:
-        return {'pph': round(omzet * 0.005, 2), 'method': 'PP 23 (0.5% dari omzet)'}
-    if omzet <= 50_000_000_000:
-        fasilitas_pkp = (4_800_000_000 / omzet) * profit
-        non_fasilitas = profit - fasilitas_pkp
-        pph = (fasilitas_pkp * 0.11) + (non_fasilitas * 0.22)
-        return {'pph': round(pph, 2), 'method': 'Pasal 31E (fasilitas 50%)'}
-    else:
-        return {'pph': round(profit * 0.22, 2), 'method': 'Pasal 17 (22%)'}
+    @app.teardown_appcontext
+    def teardown(exception):
+        pass
 
+    @app.context_processor
+    def inject_now():
+        return {'now': datetime.now(), 'today': date.today()}
 
-# ─── Routes ───
-@app.route('/')
-def index():
-    db = get_db()
-    now = datetime.now()
-    year, month = now.year, now.month
+    # ══════════════════════════════════════════════════
+    # ROUTES: Dashboard
+    # ══════════════════════════════════════════════════
 
-    pph23_total = db.execute(
-        "SELECT COALESCE(SUM(pph_amount),0) FROM withholding WHERE tax_year=? AND tax_month=?",
-        (year, month)).fetchone()[0]
+    @app.route('/')
+    def index():
+        data = g.db.get_dashboard_data()
+        deadlines = g.db.get_upcoming_deadlines()
+        yearly = g.db.get_yearly_summary(data['year'])
+        return render_template('index.html', dash=data, deadlines=deadlines,
+                               yearly=yearly)
 
-    docs_total = db.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
-    records_count = db.execute("SELECT COUNT(*) FROM withholding").fetchone()[0]
+    # ══════════════════════════════════════════════════
+    # ROUTES: Calculator
+    # ══════════════════════════════════════════════════
 
-    # Deadlines
-    today = date.today()
-    deadlines = []
-    for y, m, d, title in [
-        (year, month, 10, 'SPT Masa PPN'),
-        (year, month, 20, 'PPh 21 Masa'),
-        (year, month, 20, 'PPh 23/26 Masa'),
-    ]:
-        dl = date(y, m, d)
-        diff = (dl - today).days
-        deadlines.append({'title': title, 'date': dl.strftime('%d %b %Y'),
-                          'status': 'LEWAT' if diff < 0 else 'SEGERA' if diff <= 7 else 'OK'})
+    @app.route('/calculator', methods=['GET', 'POST'])
+    def calculator():
+        results = {}
+        calc_type = 'pph21'
 
-    return render_template('index.html', pph23_total=pph23_total,
-                           docs_total=docs_total, records_count=records_count,
-                           deadlines=deadlines, year=year, month=month)
+        if request.method == 'POST':
+            calc_type = request.form.get('calc_type', 'pph21')
+            try:
+                if calc_type == 'pph21':
+                    gross = float(request.form.get('gross', 0))
+                    status = request.form.get('ptkp_status', 'TK0')
+                    results = calc.pph21(gross, status)
 
+                elif calc_type == 'pph21_nonpegawai':
+                    gross = float(request.form.get('gross_non', 0))
+                    status = request.form.get('ptkp_status_non', 'TK0')
+                    results = calc.pph21_non_pegawai(gross, status)
 
-@app.route('/calculator', methods=['GET', 'POST'])
-def calculator():
-    result = None
-    calc_type = request.form.get('calc_type', 'pph21')
-    if request.method == 'POST':
+                elif calc_type == 'pph23':
+                    amount = float(request.form.get('amount', 0))
+                    obj_type = request.form.get('obj_type', 'Jasa')
+                    results = calc.pph23(amount, obj_type)
+
+                elif calc_type == 'pph26':
+                    amount = float(request.form.get('amount_26', 0))
+                    obj_type = request.form.get('obj_type_26', 'Jasa')
+                    have_npwp = request.form.get('have_npwp') == 'on'
+                    results = calc.pph26(amount, obj_type, have_npwp=have_npwp)
+
+                elif calc_type == 'ppn':
+                    price = float(request.form.get('price', 0))
+                    tariff = float(request.form.get('tariff', 11))
+                    include_ppn = request.form.get('include_ppn') == 'on'
+                    results = calc.ppn(price, tariff, include_ppn=include_ppn)
+
+                elif calc_type == 'ppn_impor':
+                    nilai = float(request.form.get('nilai_impor', 0))
+                    bea = float(request.form.get('bea_masuk', 0))
+                    results = calc.ppn_impor(nilai, bea)
+
+                elif calc_type == 'pph_badan':
+                    profit = float(request.form.get('profit', 0))
+                    omzet = float(request.form.get('omzet', 0))
+                    results = calc.pph_badan(profit, omzet)
+
+                elif calc_type == 'pph_final_sewa':
+                    sewa = float(request.form.get('sewa', 0))
+                    results = calc.pph_final_sewa_tanah(sewa)
+
+                elif calc_type == 'pph_final_konstruksi':
+                    nilai = float(request.form.get('konstruksi_nilai', 0))
+                    rank = request.form.get('license_rank', 'lainnya')
+                    results = calc.pph_final_konstruksi(nilai, rank)
+
+                elif calc_type == 'pph_final_pesangon':
+                    nilai = float(request.form.get('pesangon', 0))
+                    results = calc.pph_final_pesangon(nilai)
+
+                elif calc_type == 'pph22_impor':
+                    nilai = float(request.form.get('nilai_p22', 0))
+                    api = request.form.get('have_api') == 'on'
+                    results = calc.pph22_impor(nilai, api)
+
+            except ValueError as e:
+                flash(str(e), 'error')
+            except Exception as e:
+                flash(f'Kesalahan perhitungan: {str(e)}', 'error')
+
+        return render_template('calculator.html', results=results, calc_type=calc_type)
+
+    # ══════════════════════════════════════════════════
+    # ROUTES: Withholding (PPh 23/26/Final)
+    # ══════════════════════════════════════════════════
+
+    @app.route('/withholding')
+    def withholding():
+        page = request.args.get('page', 1, type=int)
+        per_page = 25
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        tax_code = request.args.get('tax_code')
+
+        records, total = g.db.get_all_withholding(
+            limit=per_page, offset=(page - 1) * per_page,
+            year=year, month=month, tax_code=tax_code,
+        )
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        return render_template('withholding.html', records=records,
+                               page=page, total_pages=total_pages,
+                               total=total, year=year, month=month, tax_code=tax_code)
+
+    @app.route('/withholding/add', methods=['POST'])
+    def add_withholding():
+        try:
+            vendor = request.form.get('vendor', '').strip()
+            if not vendor:
+                flash('Nama vendor harus diisi', 'error')
+                return redirect(url_for('withholding'))
+            amount = float(request.form.get('amount', 0))
+            obj_type = request.form.get('obj_type', 'Jasa')
+            tax_code = request.form.get('tax_code', 'pph23')
+            tariff_label = request.form.get('tariff', '2%')
+            description = request.form.get('description', '')
+
+            rid = g.db.add_withholding(vendor, amount, obj_type, tax_code, tariff_label, description)
+            # Get the result from calculator for display
+            if tax_code == 'pph26':
+                res = calc.pph26(amount, obj_type)
+            else:
+                res = calc.pph23(amount, obj_type)
+
+            flash(f'Data tersimpan: {vendor} — Rp {res["pph"]:,.0f}', 'success')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal menyimpan: {str(e)}', 'error')
+
+        return redirect(url_for('withholding'))
+
+    @app.route('/withholding/delete/<int:rid>')
+    def delete_withholding(rid):
+        g.db.delete_withholding(rid)
+        flash('Data dihapus', 'success')
+        return redirect(url_for('withholding'))
+
+    @app.route('/withholding/export')
+    def export_withholding():
+        records, _ = g.db.get_all_withholding(limit=10000)
+        output = StringIO()
+        w = csv.writer(output)
+        w.writerow(['ID', 'Vendor', 'Jumlah Bruto', 'Jenis Objek', 'Jenis Pajak',
+                     'Tarif', 'PPh', 'Deskripsi', 'Tgl Input', 'Tahun', 'Bulan'])
+        for r in records:
+            w.writerow([
+                r['id'], r['vendor'], r['amount'], r['obj_type'], r['tax_code'],
+                r['tariff_label'], r['pph_amount'], r['description'],
+                r['created_at'], r['tax_year'], r['tax_month'],
+            ])
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment;filename=pph_export.csv'},
+        )
+
+    # ══════════════════════════════════════════════════
+    # ROUTES: Documents
+    # ══════════════════════════════════════════════════
+
+    @app.route('/documents')
+    def documents():
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        category = request.args.get('category')
+        status_filter = request.args.get('status')
+
+        docs, total = g.db.get_all_documents(
+            limit=per_page, offset=(page - 1) * per_page,
+            category=category, status_filter=status_filter,
+        )
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        return render_template('documents.html', docs=docs, page=page,
+                               total_pages=total_pages, total=total,
+                               category=category, status_filter=status_filter)
+
+    @app.route('/documents/add', methods=['POST'])
+    def add_document():
+        try:
+            title = request.form.get('title', '').strip()
+            if not title:
+                flash('Nama dokumen harus diisi', 'error')
+                return redirect(url_for('documents'))
+            category = request.form.get('category', 'Umum')
+            status = request.form.get('status', 'Lengkap')
+            tax_year = request.form.get('tax_year', type=int)
+            tax_month = request.form.get('tax_month', type=int)
+            notes = request.form.get('notes', '')
+
+            g.db.add_document(title, category, status, tax_year, tax_month, notes)
+            flash('Dokumen berhasil dicatat!', 'success')
+        except Exception as e:
+            flash(f'Gagal: {str(e)}', 'error')
+        return redirect(url_for('documents'))
+
+    @app.route('/documents/delete/<int:did>')
+    def delete_document(did):
+        g.db.delete_document(did)
+        flash('Dokumen dihapus', 'success')
+        return redirect(url_for('documents'))
+
+    # ══════════════════════════════════════════════════
+    # ROUTES: Calendar
+    # ══════════════════════════════════════════════════
+
+    @app.route('/calendar')
+    def calendar_view():
+        import calendar as cal_mod
+        now = date.today()
+        y = request.args.get('year', now.year, type=int)
+        m = request.args.get('month', now.month, type=int)
+
+        cal = cal_mod.monthcalendar(y, m)
+        month_name = cal_mod.month_name[m]
+        deadlines_map = {10: 'PPN', 15: 'PPh Final', 20: 'PPh 21/23', 21: 'PPh 26'}
+
+        # Navigation
+        prev_m = m - 1 if m > 1 else 12
+        prev_y = y if m > 1 else y - 1
+        next_m = m + 1 if m < 12 else 1
+        next_y = y if m < 12 else y + 1
+
+        return render_template('calendar.html', cal=cal, month_name=month_name,
+                               year=y, month=m, today=now, deadlines=deadlines_map,
+                               prev_m=prev_m, prev_y=prev_y, next_m=next_m, next_y=next_y)
+
+    # ══════════════════════════════════════════════════
+    # ROUTES: API (JSON)
+    # ══════════════════════════════════════════════════
+
+    @app.route('/api/dashboard')
+    def api_dashboard():
+        data = g.db.get_dashboard_data()
+        deadlines = g.db.get_upcoming_deadlines()
+        data['deadlines'] = deadlines
+        return jsonify(data)
+
+    @app.route('/api/calculate', methods=['POST'])
+    def api_calculate():
+        """JSON API endpoint for calculations."""
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid JSON'}), 400
+
+        calc_type = data.get('type', 'pph21')
         try:
             if calc_type == 'pph21':
-                gross = float(request.form.get('gross', 0))
-                dep = int(request.form.get('dependents', 0))
-                result = calc_pph21(gross, dep)
+                result = calc.pph21(
+                    float(data.get('gross', 0)),
+                    data.get('ptkp_status', 'TK0'),
+                )
             elif calc_type == 'pph23':
-                amt = float(request.form.get('amount', 0))
-                obj = request.form.get('obj_type', 'Jasa')
-                result = calc_pph23(amt, obj)
+                result = calc.pph23(
+                    float(data.get('amount', 0)),
+                    data.get('obj_type', 'Jasa'),
+                )
             elif calc_type == 'ppn':
-                price = float(request.form.get('price', 0))
-                tarif = float(request.form.get('tariff', 11))
-                result = calc_ppn(price, tarif)
+                result = calc.ppn(
+                    float(data.get('price', 0)),
+                    float(data.get('tariff', 11)),
+                    data.get('include_ppn', False),
+                )
             elif calc_type == 'pph_badan':
-                profit = float(request.form.get('profit', 0))
-                omzet = float(request.form.get('omzet', 0))
-                result = calc_pph_badan(profit, omzet)
-        except (ValueError, TypeError):
-            flash('Masukkan angka yang valid!', 'error')
-    return render_template('calculator.html', result=result, calc_type=calc_type)
+                result = calc.pph_badan(
+                    float(data.get('profit', 0)),
+                    float(data.get('omzet', 0)),
+                )
+            else:
+                return jsonify({'error': f'Unknown type: {calc_type}'}), 400
+            return jsonify({'success': True, 'result': result})
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+
+    return app
 
 
-@app.route('/withholding')
-def withholding():
-    db = get_db()
-    records = db.execute(
-        "SELECT * FROM withholding ORDER BY created_at DESC LIMIT 100"
-    ).fetchall()
-    return render_template('withholding.html', records=records)
-
-@app.route('/withholding/add', methods=['POST'])
-def add_withholding():
-    db = get_db()
-    vendor = request.form['vendor']
-    amount = float(request.form.get('amount', 0))
-    obj_type = request.form['obj_type']
-    tariff_label = request.form.get('tariff', '2%')
-
-    tariff_map = {'2%': 0.02, '15%': 0.15, '20%': 0.20}
-    tariff = tariff_map.get(tariff_label, 0.02)
-    pph = amount * tariff
-
-    db.execute(
-        "INSERT INTO withholding (vendor, amount, obj_type, tariff_label, pph_amount) VALUES (?,?,?,?,?)",
-        (vendor, amount, obj_type, tariff_label, pph))
-    db.commit()
-    flash(f'Potongan PPh {obj_type} Rp {pph:,.0f} berhasil dicatat!', 'success')
-    return redirect(url_for('withholding'))
-
-@app.route('/withholding/delete/<int:rid>')
-def delete_withholding(rid):
-    db = get_db()
-    db.execute("DELETE FROM withholding WHERE id=?", (rid,))
-    db.commit()
-    flash('Data potongan berhasil dihapus.', 'success')
-    return redirect(url_for('withholding'))
-
-
-@app.route('/documents')
-def documents():
-    db = get_db()
-    docs = db.execute("SELECT * FROM documents ORDER BY created_at DESC LIMIT 100").fetchall()
-    return render_template('documents.html', docs=docs)
-
-@app.route('/documents/add', methods=['POST'])
-def add_document():
-    db = get_db()
-    db.execute(
-        "INSERT INTO documents (title, category, status) VALUES (?,?,?)",
-        (request.form['title'], request.form.get('category', 'Umum'), request.form.get('status', 'Lengkap')))
-    db.commit()
-    flash('Dokumen berhasil dicatat!', 'success')
-    return redirect(url_for('documents'))
-
-@app.route('/documents/delete/<int:did>')
-def delete_document(did):
-    db = get_db()
-    db.execute("DELETE FROM documents WHERE id=?", (did,))
-    db.commit()
-    flash('Dokumen berhasil dihapus.', 'success')
-    return redirect(url_for('documents'))
-
-
-@app.route('/calendar')
-def calendar_view():
-    import calendar as cal_mod
-    today = date.today()
-    y, m = today.year, today.month
-    cal = cal_mod.monthcalendar(y, m)
-    month_name = cal_mod.month_name[m]
-    deadlines_map = {10: 'PPN', 15: 'PPh Final', 20: 'PPh 21/23', 21: 'PPh 26'}
-    return render_template('calendar.html', cal=cal, month_name=month_name,
-                           year=y, month=m, today=today, deadlines=deadlines_map)
-
-
+# ─── Entry point ───
 if __name__ == '__main__':
-    init_db()
-    print("=" * 50)
-    print("Corporate Tax Manager — Web App")
-    print("Buka http://localhost:5000 di browser")
-    print("=" * 50)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app = create_app()
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    print('=' * 55)
+    print('  Corporate Tax Manager — Web App')
+    print(f'  Buka http://localhost:{port} di browser')
+    print('=' * 55)
+    app.run(host='0.0.0.0', port=port, debug=debug)
