@@ -205,7 +205,7 @@ class CalculatorScreen(BaseScreen):
 
     def build_ui(self):
         tab_box = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(4))
-        for idx, name in enumerate(['PPh 21', 'PPh 23', 'PPN', 'Badan']):
+        for idx, name in enumerate(['PPh 21', 'PPh 23', 'PPh 26', 'PPN', 'Badan', 'Final']):
             button = make_button(
                 name,
                 PRIMARY if idx == self.active_tab else SURFACE_MUTED,
@@ -221,7 +221,7 @@ class CalculatorScreen(BaseScreen):
         self.input_box.bind(minimum_height=self.input_box.setter('height'))
         self.body.add_widget(self.input_box)
 
-        self.result_label = make_label('', 13, NAVY, False, 'left', 120)
+        self.result_label = make_label('', 13, TEXT, False, 'left', 140)
         self.body.add_widget(self.result_label)
         self.load_tab(self.active_tab)
 
@@ -279,16 +279,30 @@ class CalculatorScreen(BaseScreen):
             button.bind(on_release=lambda _b: self.calc_pph23())
             self.input_box.add_widget(button)
         elif idx == 2:
+            self.amt26 = self.add_field('Nilai Bruto (Rp)', '100000000', True)
+            self.obj26 = self.add_spinner('Jenis Objek', ['Jasa', 'Sewa', 'Dividen', 'Bunga', 'Royalti'], 'Jasa')
+            self.npwp26 = self.add_spinner('Punya NPWP', ['Tidak', 'Ya'], 'Tidak')
+            button = make_button('Hitung PPh 26', height=40)
+            button.bind(on_release=lambda _b: self.calc_pph26())
+            self.input_box.add_widget(button)
+        elif idx == 3:
             self.price = self.add_field('Harga DPP (Rp)', '10000000', True)
             self.ppn_rate = self.add_spinner('Tarif PPN', ['11%', '12%'], '11%')
             button = make_button('Hitung PPN', height=40)
             button.bind(on_release=lambda _b: self.calc_ppn())
             self.input_box.add_widget(button)
-        else:
+        elif idx == 4:
             self.laba = self.add_field('Laba Kena Pajak (Rp)', '500000000', True)
             self.omzet = self.add_field('Omzet / Peredaran Bruto (Rp)', '2000000000', True)
             button = make_button('Hitung PPh Badan', height=40)
             button.bind(on_release=lambda _b: self.calc_badan())
+            self.input_box.add_widget(button)
+        else:
+            self.final_type = self.add_spinner('Jenis Final', ['Sewa Tanah 10%', 'Konstruksi', 'Pesangon'], 'Sewa Tanah 10%')
+            self.final_amt = self.add_field('Nilai (Rp)', '200000000', True)
+            self.final_rank = self.add_spinner('Peringkat Konstruksi', ['kecil', 'menengah', 'lainnya'], 'lainnya')
+            button = make_button('Hitung PPh Final', height=40)
+            button.bind(on_release=lambda _b: self.calc_final())
             self.input_box.add_widget(button)
 
     def calc_pph21(self):
@@ -318,6 +332,21 @@ class CalculatorScreen(BaseScreen):
         except Exception as exc:
             self.result_label.text = f'Error: {exc}'
 
+    def calc_pph26(self):
+        try:
+            amount = float(self.amt26.text or 0)
+            have_npwp = self.npwp26.text == 'Ya'
+            result = self.calc.pph26(amount, self.obj26.text, have_npwp=have_npwp)
+            self.result_label.text = (
+                f"Jenis: {result.get('jenis_pajak', 'PPh 26')}\n"
+                f"DPP: Rp {amount:,.0f}\n"
+                f"Tarif: {result.get('tarif', '-')}\n"
+                f"PPh: Rp {result.get('pph', 0):,.0f}\n"
+                f"Diterima: Rp {result.get('diterima', 0):,.0f}"
+            )
+        except Exception as exc:
+            self.result_label.text = f'Error: {exc}'
+
     def calc_ppn(self):
         try:
             price = float(self.price.text or 0)
@@ -342,6 +371,26 @@ class CalculatorScreen(BaseScreen):
                 f"Omzet: Rp {omzet:,.0f}\n"
                 f"Metode: {result.get('metode', '-')}\n"
                 f"PPh Badan: Rp {result.get('pph', 0):,.0f}"
+            )
+        except Exception as exc:
+            self.result_label.text = f'Error: {exc}'
+
+    def calc_final(self):
+        try:
+            amount = float(self.final_amt.text or 0)
+            kind = self.final_type.text
+            if kind.startswith('Sewa'):
+                result = self.calc.pph_final_sewa_tanah(amount)
+            elif kind.startswith('Konstruksi'):
+                result = self.calc.pph_final_konstruksi(amount, self.final_rank.text)
+            else:
+                result = self.calc.pph_final_pesangon(amount)
+            self.result_label.text = (
+                f"Jenis: {result.get('jenis', kind)}\n"
+                f"Nilai: Rp {amount:,.0f}\n"
+                f"Tarif: {result.get('tarif', '-')}\n"
+                f"PPh Final: Rp {result.get('pph', 0):,.0f}\n"
+                f"Diterima: Rp {result.get('diterima', 0):,.0f}"
             )
         except Exception as exc:
             self.result_label.text = f'Error: {exc}'
@@ -419,6 +468,105 @@ class WithholdingScreen(BaseScreen):
 
 
 # ═══════════════════════════════════════════════════════════
+# DOCUMENTS
+# ═══════════════════════════════════════════════════════════
+class DocumentsScreen(BaseScreen):
+    def __init__(self, **kwargs):
+        super().__init__('documents', 'Dokumen Pajak', **kwargs)
+
+    def build_ui(self):
+        add_btn = make_button('+ Tambah Dokumen', height=44)
+        add_btn.bind(on_release=lambda _b: self.show_add_popup())
+        self.body.add_widget(add_btn)
+
+        try:
+            docs, total = TaxDB().get_all_documents(limit=50)
+        except Exception as exc:
+            self.body.add_widget(make_label(f'Error DB: {exc}', 12, ERROR, False, 'left', 50))
+            return
+
+        if not docs:
+            self.body.add_widget(make_label('Belum ada dokumen', 14, SUBTLE, False, 'center', 80))
+            return
+
+        self.body.add_widget(make_label(f'{total} dokumen', 12, SUBTLE, False, 'left', 20))
+        for doc in docs:
+            card = BoxLayout(
+                orientation='vertical',
+                size_hint_y=None,
+                height=dp(78),
+                padding=[dp(10), dp(8)],
+                spacing=dp(2),
+            )
+            paint_card(card)
+            title = str(doc.get('title') or '-')
+            status = str(doc.get('status') or '-')
+            category = str(doc.get('category') or '-')
+            year = doc.get('tax_year')
+            month = doc.get('tax_month')
+            period = f'{year}-{int(month):02d}' if year and month else (str(year) if year else '-')
+            card.add_widget(make_label(f'{title}', 13, TEXT, True, 'left', 22))
+            card.add_widget(make_label(f'{category} · {status} · {period}', 11, SUBTLE, False, 'left', 18))
+            self.body.add_widget(card)
+
+    def show_add_popup(self):
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
+        content.add_widget(make_label('Tambah Dokumen', 15, TEXT, True, 'left', 28))
+        title = TextInput(hint_text='Nama dokumen', multiline=False, size_hint_y=None, height=dp(38))
+        category = Spinner(
+            text='Faktur Pajak',
+            values=['Faktur Pajak', 'SPT Tahunan', 'SPT Masa', 'Bukti Potong', 'Laporan', 'Lainnya'],
+            size_hint_y=None,
+            height=dp(38),
+        )
+        status = Spinner(
+            text='Lengkap',
+            values=['Lengkap', 'Kurang', 'Arsip', 'Dalam Proses'],
+            size_hint_y=None,
+            height=dp(38),
+        )
+        content.add_widget(title)
+        content.add_widget(category)
+        content.add_widget(status)
+
+        popup = Popup(title='Dokumen', content=content, size_hint=(0.9, 0.55), auto_dismiss=False)
+
+        def save(_btn):
+            try:
+                name = (title.text or '').strip()
+                if not name:
+                    raise ValueError('Nama dokumen harus diisi')
+                now = date.today()
+                TaxDB().add_document(
+                    title=name,
+                    category=category.text,
+                    status=status.text,
+                    tax_year=now.year,
+                    tax_month=now.month,
+                    notes='',
+                )
+                popup.dismiss()
+                self.on_enter()
+            except Exception as exc:
+                err = Popup(
+                    title='Error',
+                    content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                    size_hint=(0.8, 0.3),
+                )
+                err.open()
+
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
+        save_btn.bind(on_release=save)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
+        cancel_btn.bind(on_release=lambda _b: popup.dismiss())
+        actions.add_widget(save_btn)
+        actions.add_widget(cancel_btn)
+        content.add_widget(actions)
+        popup.open()
+
+
+# ═══════════════════════════════════════════════════════════
 # CALENDAR
 # ═══════════════════════════════════════════════════════════
 class CalendarScreen(BaseScreen):
@@ -478,6 +626,7 @@ class RootLayout(BoxLayout):
         self.sm.add_widget(DashboardScreen())
         self.sm.add_widget(CalculatorScreen())
         self.sm.add_widget(WithholdingScreen())
+        self.sm.add_widget(DocumentsScreen())
         self.sm.add_widget(CalendarScreen())
         self.add_widget(self.sm)
 
@@ -488,6 +637,7 @@ class RootLayout(BoxLayout):
             ('dashboard', 'Beranda'),
             ('calculator', 'Hitung'),
             ('withholding', 'Log'),
+            ('documents', 'Dokumen'),
             ('calendar', 'Kalender'),
         ]:
             button = make_button(

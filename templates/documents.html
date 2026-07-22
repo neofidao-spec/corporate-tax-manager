@@ -7,7 +7,7 @@
         <div class="subtitle">Manajemen arsip dokumen perpajakan &mdash; {{ total }} dokumen</div>
     </div>
     <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-        <i class="bi bi-plus-lg"></i> Tambah Dokumen
+        <i class="bi bi-plus-lg"></i> Tambah dokumen
     </button>
 </div>
 
@@ -16,7 +16,7 @@
     <form method="GET" class="row g-2 align-items-end">
         <div class="col-auto">
             <select name="category" class="form-select form-select-sm">
-                <option value="">Semua Kategori</option>
+                <option value="">Semua kategori</option>
                 <option value="Faktur Pajak" {% if category == 'Faktur Pajak' %}selected{% endif %}>Faktur Pajak</option>
                 <option value="SPT Tahunan" {% if category == 'SPT Tahunan' %}selected{% endif %}>SPT Tahunan</option>
                 <option value="SPT Masa" {% if category == 'SPT Masa' %}selected{% endif %}>SPT Masa</option>
@@ -26,7 +26,7 @@
         </div>
         <div class="col-auto">
             <select name="status" class="form-select form-select-sm">
-                <option value="">Semua Status</option>
+                <option value="">Semua status</option>
                 <option value="Lengkap" {% if status_filter == 'Lengkap' %}selected{% endif %}>Lengkap</option>
                 <option value="Kurang" {% if status_filter == 'Kurang' %}selected{% endif %}>Kurang</option>
                 <option value="Arsip" {% if status_filter == 'Arsip' %}selected{% endif %}>Arsip</option>
@@ -38,72 +38,67 @@
     </form>
 </div>
 
-<!-- Table -->
+<!-- Cards -->
 <div class="card">
-    <div class="card-body p-0">
-        {% if docs %}
-        <div class="table-responsive">
-            <table class="table table-custom mb-0">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Nama Dokumen</th>
-                        <th>Kategori</th>
-                        <th>Status</th>
-                        <th>Periode</th>
-                        <th>Tgl Input</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in docs %}
-                    <tr>
-                        <td>{{ d.id }}</td>
-                        <td class="fw-semibold">{{ d.title }}</td>
-                        <td><span class="badge bg-secondary">{{ d.category }}</span></td>
-                        <td>
-                            <span class="badge bg-{{ 'success' if d.status == 'Lengkap' else 'warning' if d.status == 'Kurang' else 'info' }}">
-                                {{ d.status }}
-                            </span>
-                        </td>
-                        <td>{% if d.tax_year %}{{ d.tax_year }}-{{ "%02d"|format(d.tax_month or 0) }}{% else %}-{% endif %}</td>
-                        <td><small>{{ d.created_at[:10] }}</small></td>
-                        <td>
-                            <form method="POST" action="/documents/delete/{{ d.id }}" style="display:inline"
-                                  onsubmit="return confirm('Hapus dokumen \'{{ d.title }}\'?')">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    {% if docs %}
+    <div class="doc-grid">
+        {% for d in docs %}
+        <div class="doc-card">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="doc-title">{{ d.title }}</div>
+                <span class="badge bg-{{ 'success' if d.status == 'Lengkap' else 'warning' if d.status == 'Kurang' else 'info' }}">
+                    {{ d.status }}
+                </span>
+            </div>
+            <div>
+                <span class="badge bg-secondary">{{ d.category }}</span>
+            </div>
+            <div class="doc-meta">
+                {% if d.tax_year %}
+                Periode: {{ d.tax_year }}{% if d.tax_month %}-{{ "%02d"|format(d.tax_month) }}{% endif %}
+                {% else %}
+                Periode: -
+                {% endif %}
+                <br>
+                Input: {{ d.created_at[:10] if d.created_at else '-' }}
+            </div>
+            {% if d.notes %}
+            <div class="doc-meta">{{ d.notes[:120] }}{% if d.notes|length > 120 %}…{% endif %}</div>
+            {% endif %}
+            <div class="doc-actions">
+                <small class="text-muted">#{{ d.id }}</small>
+                <form method="POST" action="/documents/delete/{{ d.id }}"
+                      onsubmit="return confirm('Hapus dokumen \'{{ d.title }}\'?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> Hapus
+                    </button>
+                </form>
+            </div>
         </div>
-        {% if total_pages > 1 %}
-        <div class="d-flex justify-content-center p-3">
-            <nav>
-                <ul class="pagination pagination-sm">
-                    {% for p in range(1, total_pages + 1) %}
-                    <li class="page-item {{ 'active' if p == page }}">
-                        <a class="page-link" href="?page={{ p }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ p }}</a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">
-            <i class="bi bi-folder2-open"></i>
-            <p>Belum ada dokumen pajak yang tercatat.</p>
-            <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="bi bi-plus-lg"></i> Tambah Dokumen
-            </button>
-        </div>
-        {% endif %}
+        {% endfor %}
     </div>
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-center p-3 border-top">
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {{ 'active' if p == page }}">
+                    <a class="page-link" href="?page={{ p }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ p }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-folder2-open"></i>
+        <p>Belum ada dokumen pajak yang tercatat.</p>
+        <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg"></i> Tambah dokumen
+        </button>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Modal Tambah -->
@@ -112,12 +107,12 @@
         <div class="modal-content">
             <form action="/documents/add" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-file-earmark-plus me-2"></i> Tambah Dokumen Baru</h5>
+                    <h5 class="modal-title">Tambah dokumen baru</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Nama Dokumen <span class="text-danger">*</span></label>
+                        <label class="form-label">Nama dokumen <span class="text-danger">*</span></label>
                         <input type="text" name="title" class="form-control" placeholder="Faktur Pajak Maret 2026" required>
                     </div>
                     <div class="row g-3">
@@ -142,11 +137,11 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Tahun Pajak</label>
+                            <label class="form-label">Tahun pajak</label>
                             <input type="number" name="tax_year" class="form-control" placeholder="2026" value="{{ now.year }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Bulan Pajak</label>
+                            <label class="form-label">Bulan pajak</label>
                             <input type="number" name="tax_month" class="form-control" placeholder="3" min="1" max="12">
                         </div>
                         <div class="col-12">
@@ -156,7 +151,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-copper"><i class="bi bi-check-lg"></i> Simpan</button>
                 </div>
             </form>

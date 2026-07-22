@@ -523,6 +523,98 @@
             margin-bottom: 0.35rem;
         }
 
+        /* ── Chart bars ── */
+        .chart-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.4rem;
+            height: 140px;
+            padding: 0.5rem 0.25rem 0;
+        }
+        .chart-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+            min-width: 0;
+        }
+        .chart-bar {
+            width: 100%;
+            max-width: 28px;
+            background: var(--accent);
+            border-radius: 6px 6px 2px 2px;
+            min-height: 0;
+            opacity: 0.9;
+            transition: height 0.2s ease;
+        }
+        .chart-bar.is-empty {
+            background: var(--border);
+            height: 4px !important;
+            opacity: 1;
+        }
+        .chart-label {
+            margin-top: 0.35rem;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .chart-value {
+            font-size: 0.65rem;
+            color: var(--text-faint);
+            margin-bottom: 0.2rem;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        /* ── Sticky result (desktop) ── */
+        @media (min-width: 992px) {
+            .result-box.is-sticky {
+                position: sticky;
+                top: 5.5rem;
+            }
+        }
+
+        /* ── Document cards ── */
+        .doc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 0.85rem;
+            padding: 1rem;
+        }
+        .doc-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-elevated);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            min-height: 150px;
+        }
+        .doc-card:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow);
+        }
+        .doc-card .doc-title {
+            font-weight: 650;
+            color: var(--text);
+            font-size: 0.98rem;
+            line-height: 1.35;
+        }
+        .doc-card .doc-meta {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .doc-card .doc-actions {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         /* ── Main container ── */
         .app-main {
             padding-top: 1.5rem;

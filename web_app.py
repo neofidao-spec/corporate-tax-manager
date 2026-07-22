@@ -63,8 +63,38 @@ def create_app(testing=False):
         data = g.db.get_dashboard_data()
         deadlines = g.db.get_upcoming_deadlines()
         yearly = g.db.get_yearly_summary(data['year'])
-        return render_template('index.html', dash=data, deadlines=deadlines,
-                               yearly=yearly)
+
+        # Aggregate monthly totals for chart (1..12)
+        month_totals = {m: 0.0 for m in range(1, 13)}
+        for row in yearly or []:
+            try:
+                m = int(row.get('tax_month') or 0)
+                if 1 <= m <= 12:
+                    month_totals[m] += float(row.get('total_tax') or 0)
+            except (TypeError, ValueError):
+                continue
+        chart_max = max(month_totals.values()) if month_totals else 0
+        chart = []
+        labels = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'Mei', 6: 'Jun',
+                  7: 'Jul', 8: 'Agu', 9: 'Sep', 10: 'Okt', 11: 'Nov', 12: 'Des'}
+        for m in range(1, 13):
+            val = month_totals[m]
+            pct = (val / chart_max * 100) if chart_max > 0 else 0
+            chart.append({
+                'month': m,
+                'label': labels[m],
+                'total': val,
+                'pct': max(pct, 2 if val > 0 else 0),
+            })
+
+        return render_template(
+            'index.html',
+            dash=data,
+            deadlines=deadlines,
+            yearly=yearly,
+            chart=chart,
+            chart_max=chart_max,
+        )
 
     # ══════════════════════════════════════════════════
     # ROUTES: Calculator
