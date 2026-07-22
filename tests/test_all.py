@@ -220,6 +220,15 @@ class TestTaxCalculator(unittest.TestCase):
         r = self.calc.pph_final_pesangon(40_000_000)
         self.assertResultValues(r, pph=0)
 
+    def test_final_penjualan_tanah(self):
+        r = self.calc.pph_final_penjualan_tanah(1_000_000_000)
+        self.assertResultValues(r, pph=25_000_000, tarif='2.5%')
+        self.assertIn('ppn', r)
+
+    def test_final_bunga_deposito(self):
+        r = self.calc.pph_final_bunga_deposito(10_000_000)
+        self.assertResultValues(r, pph=2_000_000, tarif='20%', diterima=8_000_000)
+
     def test_pph22_impor(self):
         r = self.calc.pph22_impor(500_000_000, have_api=True)
         self.assertResultValues(r, pph=12_500_000, tarif='2.5%')
@@ -339,6 +348,23 @@ class TestWebApp(unittest.TestCase):
         }, follow_redirects=True)
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'1.000.000', r.data)
+
+    def test_calculator_final_penjualan_post(self):
+        r = self.client.post('/calculator', data={
+            'calc_type': 'pph_final_penjualan', 'harga_jual': 1000000000,
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'2.5%', r.data)
+        # Locale-independent: comma or dot thousand separators
+        self.assertTrue(b'25,000,000' in r.data or b'25.000.000' in r.data)
+
+    def test_calculator_final_bunga_post(self):
+        r = self.client.post('/calculator', data={
+            'calc_type': 'pph_final_bunga', 'bunga_deposito': 10000000,
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'20%', r.data)
+        self.assertTrue(b'2,000,000' in r.data or b'2.000.000' in r.data)
 
     def test_withholding_page(self):
         r = self.client.get('/withholding')

@@ -299,7 +299,11 @@ class CalculatorScreen(BaseScreen):
             button.bind(on_release=lambda _b: self.calc_badan())
             self.input_box.add_widget(button)
         else:
-            self.final_type = self.add_spinner('Jenis Final', ['Sewa Tanah 10%', 'Konstruksi', 'Pesangon'], 'Sewa Tanah 10%')
+            self.final_type = self.add_spinner(
+                'Jenis Final',
+                ['Sewa Tanah 10%', 'Konstruksi', 'Pesangon', 'Penjualan Tanah 2.5%', 'Bunga Deposito 20%'],
+                'Sewa Tanah 10%',
+            )
             self.final_amt = self.add_field('Nilai (Rp)', '200000000', True)
             self.final_rank = self.add_spinner('Peringkat Konstruksi', ['kecil', 'menengah', 'lainnya'], 'lainnya')
             button = make_button('Hitung PPh Final', height=40)
@@ -384,15 +388,23 @@ class CalculatorScreen(BaseScreen):
                 result = self.calc.pph_final_sewa_tanah(amount)
             elif kind.startswith('Konstruksi'):
                 result = self.calc.pph_final_konstruksi(amount, self.final_rank.text)
+            elif kind.startswith('Penjualan') or kind.startswith('Tanah'):
+                result = self.calc.pph_final_penjualan_tanah(amount)
+            elif kind.startswith('Bunga') or kind.startswith('Deposito'):
+                result = self.calc.pph_final_bunga_deposito(amount)
             else:
                 result = self.calc.pph_final_pesangon(amount)
-            self.result_label.text = (
-                f"Jenis: {result.get('jenis', kind)}\n"
-                f"Nilai: Rp {amount:,.0f}\n"
-                f"Tarif: {result.get('tarif', '-')}\n"
-                f"PPh Final: Rp {result.get('pph', 0):,.0f}\n"
-                f"Diterima: Rp {result.get('diterima', 0):,.0f}"
-            )
+            lines = [
+                f"Jenis: {result.get('jenis', kind)}",
+                f"Nilai: Rp {amount:,.0f}",
+                f"Tarif: {result.get('tarif', '-')}",
+                f"PPh Final: Rp {result.get('pph', 0):,.0f}",
+            ]
+            if 'diterima' in result:
+                lines.append(f"Diterima: Rp {result.get('diterima', 0):,.0f}")
+            if 'ppn' in result:
+                lines.append(f"PPN terkait: Rp {result.get('ppn', 0):,.0f}")
+            self.result_label.text = '\n'.join(lines)
         except Exception as exc:
             self.result_label.text = f'Error: {exc}'
 

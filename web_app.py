@@ -196,6 +196,14 @@ def create_app(testing=False):
                     nilai = float(request.form.get('pesangon', 0))
                     results = calc.pph_final_pesangon(nilai)
 
+                elif calc_type == 'pph_final_penjualan':
+                    harga = float(request.form.get('harga_jual', 0))
+                    results = calc.pph_final_penjualan_tanah(harga)
+
+                elif calc_type == 'pph_final_bunga':
+                    bunga = float(request.form.get('bunga_deposito', 0))
+                    results = calc.pph_final_bunga_deposito(bunga)
+
                 elif calc_type == 'pph22_impor':
                     nilai = float(request.form.get('nilai_p22', 0))
                     api = request.form.get('have_api') == 'on'
