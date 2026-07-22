@@ -5,6 +5,32 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.2.0] — 2026-07-23
+
+### UX Polish — Professional Tax Dashboard Release
+
+#### Documents modal scalability
+- Single reusable edit modal via JavaScript `data-doc-*` attributes (was 50+ inline per card)
+- Add + Edit modal tetap
+
+#### Android popup parity + scroll
+- PPh 23/26 add popup: tax_code/tariff/description parity with web
+- PPh 21 add popup: period year/month + manual PPh input parity
+- Keduanya scrollable untuk keyboard handling di device kecil
+
+#### Calculator UX
+- PPh Final tab: unified result box di bawah semua card (tidak lagi inline)
+- Label objek spesifik per sub-pajak (Sewa, Konstruksi, Pesangon, Pengalihan, Deposito, PPh 22)
+
+#### Android feedback + polish
+- `show_toast()` helper — lightweight auto-dismiss banner (vs Popup berat)
+- Empty-state icons di semua screen (📋 📁 👤 🗓 📊)
+- RootLayout `show_toast` overlay + fallback popup
+
+#### Responsive improvements
+- Quick-action grid: `col-lg-2 col-sm-4 col-6` (6 di desktop, 3 di tablet, 2 di mobile)
+- Navbar expand-md (hamburger di bawah 768px)
+
 ## [1.1.4] — 2026-07-22
 
 ### Added

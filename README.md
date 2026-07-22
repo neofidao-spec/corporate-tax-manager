@@ -74,7 +74,7 @@ buildozer android debug
 corporate-tax-manager/
 ├── web_app.py              # Flask app
 ├── main.py                 # Kivy Android app
-├── buildozer.spec          # Konfigurasi build APK (v1.1.4)
+├── buildozer.spec          # Konfigurasi build APK (v1.2.0)
 ├── CHANGELOG.md
 ├── requirements.txt
 ├── .env.example

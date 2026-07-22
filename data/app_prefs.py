@@ -9,7 +9,7 @@ import os
 from typing import Any, Dict, Optional
 
 
-APP_VERSION = '1.1.4'
+APP_VERSION = '1.2.0'
 _PREFS_FILENAME = 'ctm_prefs.json'
 
 
