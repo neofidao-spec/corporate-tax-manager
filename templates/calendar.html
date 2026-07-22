@@ -187,8 +187,12 @@
                 </div>
                 {% else %}
                 <div class="empty-state">
-                    <i class="bi bi-calendar-x"></i>
-                    <p>Belum ada deadline. Tambah deadline custom sesuai kebutuhan perusahaan.</p>
+                    <i class="bi bi-calendar-plus"></i>
+                    <div class="empty-title">Belum ada deadline custom</div>
+                    <p>Belum ada deadline. Tambah deadline berulang atau sekali sesuai kebutuhan perusahaan.</p>
+                    <button class="btn btn-copper btn-sm" data-bs-toggle="modal" data-bs-target="#addReminderModal">
+                        <i class="bi bi-plus-lg"></i> Tambah deadline
+                    </button>
                 </div>
                 {% endif %}
             </div>

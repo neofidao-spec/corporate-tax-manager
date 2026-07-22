@@ -121,6 +121,7 @@ def create_app(testing=False):
             'index.html',
             dash=data,
             deadlines=deadlines,
+            urgent_deadlines=[d for d in (deadlines or []) if d.get('status') in ('LEWAT', 'SEGERA')],
             yearly=yearly,
             chart=chart,
             chart_max=chart_max,

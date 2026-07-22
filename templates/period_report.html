@@ -96,7 +96,10 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-inbox"></i>
-            <p>Belum ada data potongan untuk periode ini.</p>
+            <div class="empty-title">Tidak ada data periode ini</div>
+            <p>Belum ada data potongan untuk periode ini. Pilih bulan lain atau catat transaksi baru.</p>
+            <a href="/withholding" class="btn btn-copper btn-sm">Catat potongan</a>
+            <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Log PPh 21</a>
         </div>
         {% endif %}
     </div>

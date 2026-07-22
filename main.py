@@ -170,6 +170,29 @@ class DashboardScreen(BaseScreen):
         except Exception:
             pass
 
+        try:
+            deadlines = TaxDB().get_upcoming_deadlines(days_ahead=45)
+        except Exception:
+            deadlines = []
+        urgent = [d for d in deadlines if d.get('status') in ('LEWAT', 'SEGERA')]
+        if urgent:
+            top = urgent[0]
+            banner = BoxLayout(
+                orientation='vertical', size_hint_y=None, height=dp(72),
+                padding=[dp(12), dp(8)], spacing=dp(2),
+            )
+            paint_card(banner)
+            status = top.get('status', 'SEGERA')
+            status_color = ERROR if status == 'LEWAT' else WARNING
+            banner.add_widget(make_label(f'REMINDER · {status}', 11, status_color, True, 'left', 18))
+            banner.add_widget(make_label(
+                f"{top.get('title') or '-'} — {top.get('date') or ''}",
+                12, TEXT, False, 'left', 22,
+            ))
+            if len(urgent) > 1:
+                banner.add_widget(make_label(f'+{len(urgent) - 1} deadline lain', 11, SUBTLE, False, 'left', 16))
+            self.body.add_widget(banner)
+
         hero = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(2), size_hint_y=None, height=dp(78))
         paint_card(hero)
         hero.add_widget(make_label('TOTAL PPH BULAN INI', 11, PRIMARY, True, 'left', 18))
@@ -201,10 +224,6 @@ class DashboardScreen(BaseScreen):
         self.body.add_widget(actions)
 
         self.body.add_widget(section_label('Deadline mendatang'))
-        try:
-            deadlines = TaxDB().get_upcoming_deadlines(days_ahead=45)
-        except Exception:
-            deadlines = []
         if not deadlines:
             self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'left', 28))
         for item in deadlines[:6]:

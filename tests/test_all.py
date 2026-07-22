@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import unittest
+from datetime import date
 from decimal import Decimal
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -669,6 +670,34 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'/reports/period', r.data)
         self.assertIn(b'/documents', r.data)
         self.assertIn(b'/calendar', r.data)
+
+    def test_empty_state_and_urgent_reminder(self):
+        # Empty pages still render consistent empty-state markup
+        for path, marker in [
+            ('/withholding', b'empty-title'),
+            ('/documents', b'empty-title'),
+            ('/pph21', b'empty-title'),
+            ('/reports/period', b'empty-title'),
+        ]:
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertIn(b'empty-state', r.data, path)
+            self.assertIn(marker, r.data, path)
+
+        # Seed an urgent one-time deadline for today → dashboard banner
+        r = self.client.post('/calendar/reminders/add', data={
+            'title': 'Deadline Urgent UI',
+            'one_time_date': date.today().isoformat(),
+            'description': 'urgent',
+            'tax_code': 'custom',
+            # is_recurring unchecked
+            'is_active': 'on',
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        dash = self.client.get('/')
+        self.assertEqual(dash.status_code, 200)
+        self.assertIn(b'Reminder deadline', dash.data)
+        self.assertIn(b'Deadline Urgent UI', dash.data)
 
 
 if __name__ == '__main__':

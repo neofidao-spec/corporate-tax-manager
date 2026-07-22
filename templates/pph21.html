@@ -114,7 +114,11 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-people"></i>
-            <p>Belum ada data PPh 21. Tambah dari tombol di atas (PPh dihitung otomatis).</p>
+            <div class="empty-title">Belum ada log PPh 21</div>
+            <p>Belum ada data PPh 21. Tambah dari tombol di atas — PPh dihitung otomatis jika dikosongkan.</p>
+            <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
+                <i class="bi bi-plus-lg"></i> Tambah log PPh 21
+            </button>
         </div>
         {% endif %}
     </div>

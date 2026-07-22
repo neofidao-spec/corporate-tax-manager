@@ -23,6 +23,28 @@
     </form>
 </div>
 
+{% if urgent_deadlines %}
+<div class="alert-reminder {% if urgent_deadlines|selectattr('status', 'equalto', 'LEWAT')|list %}danger{% endif %}">
+    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+            <strong><i class="bi bi-bell me-1"></i> Reminder deadline</strong>
+            <div class="small mt-1">
+                {% for d in urgent_deadlines[:3] %}
+                <div>
+                    <span class="badge badge-deadline bg-{{ 'danger' if d.status == 'LEWAT' else 'warning' }}">{{ d.status }}</span>
+                    {{ d.title }} — {{ d.date }}
+                </div>
+                {% endfor %}
+                {% if urgent_deadlines|length > 3 %}
+                <div class="text-muted">+{{ urgent_deadlines|length - 3 }} deadline lain</div>
+                {% endif %}
+            </div>
+        </div>
+        <a href="/calendar" class="btn btn-sm btn-outline-copper">Buka kalender</a>
+    </div>
+</div>
+{% endif %}
+
 <!-- Stat Cards: decision-first KPI hierarchy -->
 <div class="row g-3 mb-4">
     <div class="col-md-4 col-12">
@@ -96,9 +118,11 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="empty-state py-4">
+                <div class="empty-state compact py-4">
                     <i class="bi bi-calendar-check"></i>
+                    <div class="empty-title">Tidak ada deadline dekat</div>
                     <p class="mb-0">Tidak ada deadline dalam 30 hari ke depan.</p>
+                    <a href="/calendar" class="btn btn-outline-copper btn-sm mt-2">Kelola kalender</a>
                 </div>
                 {% endif %}
             </div>
@@ -159,8 +183,10 @@
                 {% else %}
                 <div class="empty-state">
                     <i class="bi bi-bar-chart"></i>
-                    <p>Belum ada data transaksi untuk tahun ini.</p>
-                    <a href="/withholding" class="btn btn-copper btn-sm">Mulai catat transaksi</a>
+                    <div class="empty-title">Belum ada tren PPh</div>
+                    <p>Belum ada data transaksi untuk tahun ini. Mulai dari log potongan atau PPh 21.</p>
+                    <a href="/withholding" class="btn btn-copper btn-sm">Catat potongan</a>
+                    <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Log PPh 21</a>
                 </div>
                 {% endif %}
             </div>
