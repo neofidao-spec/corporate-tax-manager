@@ -67,7 +67,10 @@ def create_app(testing=False):
             month = now.month
 
         data = g.db.get_dashboard_data(year=year, month=month)
-        deadlines = g.db.get_upcoming_deadlines()
+        deadline_window = request.args.get('window', 30, type=int) or 30
+        if deadline_window not in (7, 30, 60):
+            deadline_window = 30
+        deadlines = g.db.get_upcoming_deadlines(days_ahead=deadline_window)
         yearly = g.db.get_yearly_summary(data['year'])
 
         # Previous month comparison
@@ -121,6 +124,7 @@ def create_app(testing=False):
             'index.html',
             dash=data,
             deadlines=deadlines,
+            deadline_window=deadline_window,
             urgent_deadlines=[d for d in (deadlines or []) if d.get('status') in ('LEWAT', 'SEGERA')],
             yearly=yearly,
             chart=chart,

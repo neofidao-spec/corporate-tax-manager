@@ -92,7 +92,7 @@
                             {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
                             <span class="badge bg-secondary">{{ labels.get(r.tax_code, r.tax_code) }}</span>
                         </td>
-                        <td class="fw-bold text-{{ 'danger' if r.pph_amount > 10000000 else 'dark' }}">
+                        <td class="fw-bold text-accent">
                             Rp {{ "{:,.0f}".format(r.pph_amount) }}
                         </td>
                         <td><small class="text-muted">{{ r.description[:40] if r.description else '-' }}</small></td>

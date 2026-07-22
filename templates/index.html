@@ -95,8 +95,16 @@
     <!-- Deadline Section -->
     <div class="col-lg-4">
         <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-bell me-2 text-muted"></i> Deadline mendatang
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bell me-2 text-muted"></i> Deadline mendatang</span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Jangka waktu deadline">
+                    <a href="?window=7{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}"
+                       class="btn btn-sm {{ 'btn-copper' if deadline_window == 7 else 'btn-outline-copper' }}">7 hr</a>
+                    <a href="?window=30{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}"
+                       class="btn btn-sm {{ 'btn-copper' if deadline_window == 30 else 'btn-outline-copper' }}">30 hr</a>
+                    <a href="?window=60{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}"
+                       class="btn btn-sm {{ 'btn-copper' if deadline_window == 60 else 'btn-outline-copper' }}">60 hr</a>
+                </div>
             </div>
             <div class="card-body p-0">
                 {% if deadlines %}

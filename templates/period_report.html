@@ -7,7 +7,23 @@
         <div class="subtitle">Ringkasan potongan pajak — {{ month_labels[selected_month] }} {{ selected_year }}</div>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
-        <form method="GET" class="period-toolbar d-flex align-items-center gap-2 flex-wrap">
+        <a class="btn btn-outline-copper btn-sm"
+           href="/reports/period/print?year={{ selected_year }}&month={{ selected_month }}"
+           target="_blank">
+            <i class="bi bi-printer"></i> Preview cetak
+        </a>
+        <a class="btn btn-outline-copper btn-sm"
+           href="/reports/period/export?year={{ selected_year }}&month={{ selected_month }}">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Period navigation as card-header -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-semibold">Periode</span>
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
             <a class="btn btn-outline-copper btn-sm" href="/reports/period?year={{ prev_y }}&month={{ prev_m }}">
                 <i class="bi bi-chevron-left"></i>
             </a>
@@ -22,15 +38,6 @@
                 <i class="bi bi-chevron-right"></i>
             </a>
         </form>
-        <a class="btn btn-outline-copper btn-sm"
-           href="/reports/period/print?year={{ selected_year }}&month={{ selected_month }}"
-           target="_blank">
-            <i class="bi bi-printer"></i> Preview cetak
-        </a>
-        <a class="btn btn-outline-copper btn-sm"
-           href="/reports/period/export?year={{ selected_year }}&month={{ selected_month }}">
-            <i class="bi bi-download"></i> Export CSV
-        </a>
     </div>
 </div>
 

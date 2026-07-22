@@ -266,13 +266,16 @@ class DashboardScreen(BaseScreen):
 
         self.body.add_widget(section_label('Deadline mendatang'))
         if not deadlines:
-            self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'left', 28))
+            self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'center', 28))
         for item in deadlines[:6]:
             status = item.get('status', 'OK')
             color = ERROR if status == 'LEWAT' else (WARNING if status == 'SEGERA' else GREEN)
-            row = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(12), dp(8)], spacing=dp(8))
+            row = BoxLayout(size_hint_y=None, height=dp(56), padding=[dp(12), dp(8)], spacing=dp(8))
             paint_card(row)
-            row.add_widget(make_label(str(item.get('title') or '-'), 13, TEXT, True, 'left'))
+            title_lbl = make_label(str(item.get('title') or '-'), 13, TEXT, True, 'left')
+            # Wrap long deadlines
+            title_lbl.bind(size=lambda w, _v: setattr(w, 'text_size', (w.width, None)))
+            row.add_widget(title_lbl)
             row.add_widget(Widget())
             row.add_widget(make_label(status, 12, color, True, 'right'))
             self.body.add_widget(row)
@@ -289,13 +292,13 @@ class CalculatorScreen(BaseScreen):
         self.tab_buttons = {}
 
     def build_ui(self):
-        tab_box = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(4))
+        tab_box = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(4))
         for idx, name in enumerate(['PPh 21', 'PPh 23', 'PPh 26', 'PPN', 'Badan', 'Final']):
             button = make_button(
                 name,
                 PRIMARY if idx == self.active_tab else SURFACE_MUTED,
                 WHITE if idx == self.active_tab else TEXT,
-                height=36,
+                height=40,
             )
             button.bind(on_release=lambda _b, i=idx: self.switch_tab(i))
             tab_box.add_widget(button)
@@ -598,7 +601,37 @@ class WithholdingScreen(BaseScreen):
             paint_card(card)
             left = f"{row.get('vendor', '-')} ({row.get('obj_type', '-')})"
             card.add_widget(make_label(left, 12, TEXT, True, 'left'))
-            card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right'))
+            card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right'))
+            # Delete button with confirm
+            del_btn = make_button('✕', ERROR, WHITE, 32)
+            rid = row.get('id')
+            def make_delete_cb(rid, title):
+                def cb(_b):
+                    confirm = Popup(
+                        title='Konfirmasi Hapus',
+                        content=make_label(f'Hapus "{title}"?', 13, TEXT, False, 'center', 50),
+                        size_hint=(0.84, 0.32),
+                    )
+                    def do_delete(_btn):
+                        try:
+                            TaxDB().cursor.execute('DELETE FROM withholding WHERE id=?', (rid,))
+                            TaxDB().conn.commit()
+                        except Exception as exc:
+                            pass
+                        confirm.dismiss()
+                        Clock.schedule_once(lambda _dt: self.on_enter())
+                    btn_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
+                    btn_row.add_widget(make_button('Hapus', ERROR, WHITE, 36))
+                    btn_row.children[-1].bind(on_release=do_delete)
+                    btn_row.add_widget(make_button('Batal', SURFACE_MUTED, TEXT, 36))
+                    btn_row.children[-1].bind(on_release=lambda _b2: confirm.dismiss())
+                    confirm.content.add_widget(btn_row)
+                    # Adjust confirm height
+                    confirm.size_hint_y = 0.38
+                    confirm.open()
+                return cb
+            del_btn.bind(on_release=make_delete_cb(rid, row.get('vendor', '-')))
+            card.add_widget(del_btn)
             self.body.add_widget(card)
 
     def export_csv(self):
@@ -647,7 +680,7 @@ class WithholdingScreen(BaseScreen):
                 popup.dismiss()
                 self.on_enter()
             except Exception as exc:
-                err = Popup(title='Error', content=make_label(str(exc), 12, ERROR, False, 'center', 60), size_hint=(0.8, 0.3))
+                err = Popup(title='Error', content=make_label(str(exc), 12, ERROR, False, 'center', 60), size_hint=(0.88, 0.44))
                 err.open()
 
         actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
@@ -702,7 +735,36 @@ class Pph21Screen(BaseScreen):
             left = f"{row.get('employee_name', '-')} · {row.get('ptkp_status', '-')}"
             period = f"{row.get('period_year')}-{int(row.get('period_month') or 0):02d}"
             card.add_widget(make_label(f'{left}\n{period}', 11, TEXT, True, 'left', 42))
-            card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right', 42))
+            card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right', 42))
+            # Delete button with confirm
+            del_btn = make_button('✕', ERROR, WHITE, 32)
+            rid = row.get('id')
+            def make_delete_cb(rid, name):
+                def cb(_b):
+                    confirm = Popup(
+                        title='Konfirmasi Hapus',
+                        content=make_label(f'Hapus "{name}"?', 13, TEXT, False, 'center', 50),
+                        size_hint=(0.84, 0.32),
+                    )
+                    def do_delete(_btn):
+                        try:
+                            TaxDB().cursor.execute('DELETE FROM pph21_log WHERE id=?', (rid,))
+                            TaxDB().conn.commit()
+                        except Exception:
+                            pass
+                        confirm.dismiss()
+                        Clock.schedule_once(lambda _dt: self.on_enter())
+                    btn_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
+                    btn_row.add_widget(make_button('Hapus', ERROR, WHITE, 36))
+                    btn_row.children[-1].bind(on_release=do_delete)
+                    btn_row.add_widget(make_button('Batal', SURFACE_MUTED, TEXT, 36))
+                    btn_row.children[-1].bind(on_release=lambda _b2: confirm.dismiss())
+                    confirm.content.add_widget(btn_row)
+                    confirm.size_hint_y = 0.38
+                    confirm.open()
+                return cb
+            del_btn.bind(on_release=make_delete_cb(rid, row.get('employee_name', '-')))
+            card.add_widget(del_btn)
             self.body.add_widget(card)
 
     def export_csv(self):
@@ -776,7 +838,7 @@ class Pph21Screen(BaseScreen):
                 err = Popup(
                     title='Error',
                     content=make_label(str(exc), 12, ERROR, False, 'center', 60),
-                    size_hint=(0.8, 0.3),
+                    size_hint=(0.88, 0.44),
                 )
                 err.open()
 
@@ -944,7 +1006,7 @@ class DocumentsScreen(BaseScreen):
                 err = Popup(
                     title='Error',
                     content=make_label(str(exc), 12, ERROR, False, 'center', 60),
-                    size_hint=(0.8, 0.3),
+                    size_hint=(0.88, 0.44),
                 )
                 err.open()
 
@@ -1000,7 +1062,7 @@ class DocumentsScreen(BaseScreen):
                 err = Popup(
                     title='Error',
                     content=make_label(str(exc), 12, ERROR, False, 'center', 60),
-                    size_hint=(0.8, 0.3),
+                    size_hint=(0.88, 0.44),
                 )
                 err.open()
 
@@ -1121,7 +1183,7 @@ class CalendarScreen(BaseScreen):
                 err = Popup(
                     title='Error',
                     content=make_label(str(exc), 12, ERROR, False, 'center', 60),
-                    size_hint=(0.8, 0.3),
+                    size_hint=(0.88, 0.44),
                 )
                 err.open()
 
@@ -1193,7 +1255,7 @@ class CalendarScreen(BaseScreen):
                 err = Popup(
                     title='Error',
                     content=make_label(str(exc), 12, ERROR, False, 'center', 60),
-                    size_hint=(0.8, 0.3),
+                    size_hint=(0.88, 0.44),
                 )
                 err.open()
 
