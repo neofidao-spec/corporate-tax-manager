@@ -12,20 +12,56 @@ from datetime import datetime, date
 from typing import List, Optional, Dict, Any, Tuple
 
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tax_data.db')
+def _default_db_path() -> str:
+    """Resolve writable DB path for Android APK and desktop/Termux."""
+    # Android private app storage (set by python-for-android)
+    for key in ('ANDROID_PRIVATE', 'ANDROID_APP_PATH'):
+        base = os.environ.get(key)
+        if base:
+            try:
+                os.makedirs(base, exist_ok=True)
+                return os.path.join(base, 'tax_data.db')
+            except Exception:
+                pass
+
+    # Fallback: user home (writable on Android/Termux)
+    try:
+        home = os.path.expanduser('~')
+        if home and home != '~' and os.path.isdir(home):
+            data_dir = os.path.join(home, '.corporate_tax_manager')
+            os.makedirs(data_dir, exist_ok=True)
+            return os.path.join(data_dir, 'tax_data.db')
+    except Exception:
+        pass
+
+    # Last resort: project directory (desktop only)
+    project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(project, 'tax_data.db')
+
+
+DB_PATH = _default_db_path()
 
 
 class TaxDB:
     """Database layer untuk Corporate Tax Manager."""
 
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or _default_db_path()
 
     def _conn(self) -> sqlite3.Connection:
+        parent = os.path.dirname(self.db_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+        except Exception:
+            pass
         return conn
 
     def init_tables(self):
