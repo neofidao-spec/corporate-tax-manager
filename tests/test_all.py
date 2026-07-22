@@ -597,6 +597,24 @@ class TestWebApp(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'Laporan periode', r.data)
 
+    def test_period_report_print_and_export(self):
+        # seed some data for current period
+        self.client.post('/withholding/add', data={
+            'vendor': 'Print Vendor', 'amount': 100000000, 'obj_type': 'Jasa',
+            'tax_code': 'pph23', 'tariff': '2%', 'description': 'seed',
+        }, follow_redirects=True)
+        r = self.client.get('/reports/period/print?year=2026&month=7')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Laporan Pajak Periode', r.data)
+        self.assertIn(b'window.print', r.data)
+
+        r2 = self.client.get('/reports/period/export?year=2026&month=7')
+        self.assertEqual(r2.status_code, 200)
+        ctype = r2.headers.get('Content-Type', '')
+        self.assertIn('text/csv', ctype)
+        self.assertIn(b'TOTAL', r2.data)
+        self.assertIn(b'Kode Pajak', r2.data)
+
     def test_summary_by_period_includes_pph21(self):
         path = '/data/data/com.termux/files/home/test_corporate_tax_summary.db'
         try:

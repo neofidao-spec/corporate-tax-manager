@@ -415,6 +415,74 @@ def create_app(testing=False):
             next_m=next_m,
         )
 
+    @app.route('/reports/period/print')
+    def print_period_report():
+        now = date.today()
+        year = request.args.get('year', now.year, type=int) or now.year
+        month = request.args.get('month', now.month, type=int) or now.month
+        if month < 1 or month > 12:
+            month = now.month
+        try:
+            summary = g.db.get_summary_by_period(year, month)
+        except ValueError:
+            summary = {
+                'year': year, 'month': month, 'grand_total': 0,
+                'withholding_total': 0, 'pph21_total': 0,
+                'details': [], 'count': 0, 'transaction_count': 0,
+            }
+        labels = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
+                  7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
+        return render_template(
+            'print_period_report.html',
+            summary=summary,
+            month_labels=labels,
+            selected_year=year,
+            selected_month=month,
+            generated_at=datetime.now(),
+        )
+
+    @app.route('/reports/period/export')
+    def export_period_report():
+        now = date.today()
+        year = request.args.get('year', now.year, type=int) or now.year
+        month = request.args.get('month', now.month, type=int) or now.month
+        if month < 1 or month > 12:
+            month = now.month
+        try:
+            summary = g.db.get_summary_by_period(year, month)
+        except ValueError as e:
+            flash(str(e), 'error')
+            return redirect(url_for('period_report', year=year, month=month))
+
+        labels = {
+            'pph23': 'PPh 23', 'pph26': 'PPh 26',
+            'pph_final': 'PPh Final', 'pph21': 'PPh 21',
+        }
+        output = StringIO()
+        w = csv.writer(output)
+        w.writerow(['Tahun', 'Bulan', 'Kode Pajak', 'Label', 'Jenis Objek',
+                     'Jumlah', 'Total Bruto', 'Total PPh'])
+        for d in summary.get('details') or []:
+            code = d.get('tax_code') or ''
+            w.writerow([
+                year, month, code, labels.get(code, code),
+                d.get('obj_type') or '',
+                d.get('count') or 0,
+                d.get('total_amount') or 0,
+                d.get('total_tax') or 0,
+            ])
+        # Totals row
+        w.writerow([])
+        w.writerow(['', '', 'TOTAL', '', '',
+                    summary.get('transaction_count') or 0, '',
+                    summary.get('grand_total') or 0])
+        filename = f'laporan_periode_{year}_{month:02d}.csv'
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment;filename={filename}'},
+        )
+
     @app.route('/withholding/export')
     def export_withholding():
         year = request.args.get('year', type=int)
