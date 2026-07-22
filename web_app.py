@@ -271,6 +271,85 @@ def create_app(testing=False):
         flash('Data dihapus', 'success')
         return redirect(url_for('withholding'))
 
+    # ══════════════════════════════════════════════════
+    # ROUTES: PPh 21 Log (payroll)
+    # ══════════════════════════════════════════════════
+
+    @app.route('/pph21')
+    def pph21_log():
+        page = request.args.get('page', 1, type=int)
+        per_page = 25
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        q = (request.args.get('q') or '').strip() or None
+        records, total = g.db.get_pph21_log(
+            limit=per_page,
+            offset=(page - 1) * per_page,
+            year=year,
+            month=month,
+            q=q,
+        )
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        year_total = g.db.get_total_pph21(year) if year else g.db.get_total_pph21(date.today().year)
+        return render_template(
+            'pph21.html',
+            records=records,
+            page=page,
+            total_pages=total_pages,
+            total=total,
+            year=year,
+            month=month,
+            q=q or '',
+            year_total=year_total,
+            now=date.today(),
+        )
+
+    @app.route('/pph21/add', methods=['POST'])
+    def add_pph21():
+        try:
+            name = request.form.get('employee_name', '').strip()
+            gross = float(request.form.get('gross_salary', 0))
+            ptkp = request.form.get('ptkp_status', 'TK0')
+            year = request.form.get('year', type=int) or date.today().year
+            month = request.form.get('month', type=int) or date.today().month
+            # Auto-calc PPh 21 from calculator if not provided
+            pph_raw = request.form.get('pph21_amount', '').strip()
+            if pph_raw:
+                pph_amount = float(pph_raw)
+            else:
+                result = calc.pph21(gross, ptkp)
+                pph_amount = float(result.get('pph_monthly') or result.get('pph') or 0)
+            dependents_map = {
+                'TK0': 0, 'TK1': 1, 'TK2': 2, 'TK3': 3,
+                'K0': 0, 'K1': 1, 'K2': 2, 'K3': 3,
+            }
+            dependents = dependents_map.get(str(ptkp).upper(), 0)
+            g.db.add_pph21(
+                employee_name=name,
+                gross_salary=gross,
+                dependents=dependents,
+                ptkp_status=ptkp,
+                pph21_amount=pph_amount,
+                year=year,
+                month=month,
+            )
+            flash(f'PPh 21 tersimpan: {name} — Rp {pph_amount:,.0f}', 'success')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal menyimpan: {e}', 'error')
+        return redirect(url_for('pph21_log'))
+
+    @app.route('/pph21/delete/<int:rid>', methods=['POST'])
+    def delete_pph21(rid):
+        try:
+            ok = g.db.delete_pph21(rid)
+            flash('Data dihapus' if ok else 'Data tidak ditemukan',
+                  'success' if ok else 'error')
+        except Exception as e:
+            flash(f'Gagal menghapus: {e}', 'error')
+        return redirect(url_for('pph21_log'))
+
     @app.route('/withholding/export')
     def export_withholding():
         year = request.args.get('year', type=int)

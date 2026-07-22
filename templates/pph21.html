@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Log PPh 21{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h2>Log PPh 21</h2>
+        <div class="subtitle">Catat potongan PPh 21 pegawai &mdash; {{ total }} data</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg"></i> Tambah
+        </button>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4 col-6">
+        <div class="card stat-card h-100">
+            <div class="label">Total data</div>
+            <div class="value">{{ total }}</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-6">
+        <div class="card stat-card h-100">
+            <div class="label">Total PPh 21 {{ year or now.year }}</div>
+            <div class="value">Rp {{ "{:,.0f}".format(year_total) }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3 filter-form">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-4 col-12">
+            <label class="form-label">Cari pegawai</label>
+            <input type="text" name="q" class="form-control form-control-sm" value="{{ q }}" placeholder="Nama pegawai">
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Tahun</label>
+            <input type="number" name="year" class="form-control form-control-sm" style="width:90px;" value="{{ year or '' }}">
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Bulan</label>
+            <input type="number" name="month" class="form-control form-control-sm" style="width:80px;" min="1" max="12" value="{{ month or '' }}">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-sm btn-copper"><i class="bi bi-funnel"></i> Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table table-custom mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Pegawai</th>
+                        <th>Gaji bruto</th>
+                        <th>PTKP</th>
+                        <th>PPh 21</th>
+                        <th>Periode</th>
+                        <th>Input</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>{{ r.id }}</td>
+                        <td class="fw-semibold">{{ r.employee_name }}</td>
+                        <td>Rp {{ "{:,.0f}".format(r.gross_salary) }}</td>
+                        <td><span class="badge bg-secondary">{{ r.ptkp_status }}</span></td>
+                        <td class="fw-bold">Rp {{ "{:,.0f}".format(r.pph21_amount) }}</td>
+                        <td>{{ r.period_year }}-{{ "%02d"|format(r.period_month) }}</td>
+                        <td><small>{{ r.created_at[:10] if r.created_at else '-' }}</small></td>
+                        <td>
+                            <form method="POST" action="/pph21/delete/{{ r.id }}"
+                                  onsubmit="return confirm('Hapus data {{ r.employee_name }}?')">
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center p-3 border-top">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {{ 'active' if p == page }}">
+                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>Belum ada data PPh 21. Tambah dari tombol di atas (PPh dihitung otomatis).</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/pph21/add">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tambah log PPh 21</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nama pegawai <span class="text-danger">*</span></label>
+                        <input type="text" name="employee_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Gaji bruto bulanan</label>
+                        <input type="number" name="gross_salary" class="form-control" min="0" value="15000000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status PTKP</label>
+                        <select name="ptkp_status" class="form-select">
+                            <option value="TK0">TK/0</option>
+                            <option value="TK1">TK/1</option>
+                            <option value="TK2">TK/2</option>
+                            <option value="TK3">TK/3</option>
+                            <option value="K0">K/0</option>
+                            <option value="K1">K/1</option>
+                            <option value="K2">K/2</option>
+                            <option value="K3">K/3</option>
+                        </select>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Tahun</label>
+                            <input type="number" name="year" class="form-control" value="{{ now.year }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Bulan</label>
+                            <input type="number" name="month" class="form-control" min="1" max="12" value="{{ now.month }}">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">PPh 21 (opsional — kosongkan untuk hitung otomatis)</label>
+                        <input type="number" name="pph21_amount" class="form-control" min="0" placeholder="Auto dari kalkulator">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-copper">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

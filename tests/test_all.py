@@ -543,6 +543,42 @@ class TestWebApp(unittest.TestCase):
             if os.path.exists(path):
                 os.remove(path)
 
+    def test_pph21_log_page(self):
+        r = self.client.get('/pph21')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Log PPh 21', r.data)
+
+    def test_pph21_log_crud(self):
+        r = self.client.post('/pph21/add', data={
+            'employee_name': 'Budi Uji',
+            'gross_salary': 15000000,
+            'ptkp_status': 'TK2',
+            'year': 2026,
+            'month': 7,
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Budi Uji', r.data)
+        # search
+        r2 = self.client.get('/pph21?q=Budi')
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn(b'Budi Uji', r2.data)
+        # DB helpers
+        path = '/data/data/com.termux/files/home/test_corporate_tax_pph21.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            rid = db.add_pph21('Ani', 10000000, 1, 'K1', 500000, 2026, 7)
+            rows, total = db.get_pph21_log(q='Ani')
+            self.assertEqual(total, 1)
+            self.assertEqual(rows[0]['id'], rid)
+            self.assertGreater(db.get_total_pph21(2026), 0)
+            self.assertTrue(db.delete_pph21(rid))
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

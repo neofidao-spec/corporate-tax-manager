@@ -322,6 +322,21 @@ class TaxDB:
             raise ValueError('Nilai gaji/PPh harus berupa angka')
         if gross_salary < 0 or pph21_amount < 0:
             raise ValueError('Nilai gaji/PPh tidak boleh negatif')
+        try:
+            year = int(year)
+            month = int(month)
+        except (TypeError, ValueError):
+            raise ValueError('Tahun/bulan periode harus angka')
+        if month < 1 or month > 12:
+            raise ValueError('Bulan periode harus 1-12')
+        ptkp_status = str(ptkp_status or 'TK0').upper().strip()
+        try:
+            dependents = int(dependents or 0)
+        except (TypeError, ValueError):
+            raise ValueError('Jumlah tanggungan harus angka')
+        if dependents < 0:
+            raise ValueError('Jumlah tanggungan tidak boleh negatif')
+
         conn = self._conn()
         cursor = conn.cursor()
         cursor.execute("""
@@ -330,33 +345,65 @@ class TaxDB:
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (employee_name, gross_salary, dependents, ptkp_status, pph21_amount, year, month))
         conn.commit()
-        rid = cursor.lastrowid
+        rid = int(cursor.lastrowid or 0)
         conn.close()
         return rid
 
-    def get_pph21_log(self, limit: int = 100) -> List[Dict]:
+    def get_pph21_log(self, limit: int = 100, offset: int = 0,
+                      year: Optional[int] = None,
+                      month: Optional[int] = None,
+                      q: Optional[str] = None) -> Tuple[List[Dict], int]:
         conn = self._conn()
         cursor = conn.cursor()
-        cursor.execute("""
+        conditions = []
+        params: List[Any] = []
+        if year:
+            conditions.append('period_year = ?')
+            params.append(int(year))
+        if month:
+            conditions.append('period_month = ?')
+            params.append(int(month))
+        if q:
+            conditions.append('employee_name LIKE ?')
+            params.append(f'%{q.strip()}%')
+        where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+        cursor.execute(f'SELECT COUNT(*) FROM pph21_log {where}', params)
+        total = cursor.fetchone()[0]
+        cursor.execute(f"""
             SELECT id, employee_name, gross_salary, dependents, ptkp_status,
                    pph21_amount, period_year, period_month, created_at
-            FROM pph21_log
-            ORDER BY created_at DESC LIMIT ?
-        """, (limit,))
+            FROM pph21_log {where}
+            ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, params + [limit, offset])
         rows = [dict(r) for r in cursor.fetchall()]
         conn.close()
-        return rows
+        return rows, total
 
-    def get_total_pph21(self, year: int) -> float:
+    def get_total_pph21(self, year: int, month: Optional[int] = None) -> float:
         conn = self._conn()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT COALESCE(SUM(pph21_amount), 0)
-            FROM pph21_log WHERE period_year = ?
-        """, (year,))
+        if month:
+            cursor.execute("""
+                SELECT COALESCE(SUM(pph21_amount), 0)
+                FROM pph21_log WHERE period_year = ? AND period_month = ?
+            """, (year, month))
+        else:
+            cursor.execute("""
+                SELECT COALESCE(SUM(pph21_amount), 0)
+                FROM pph21_log WHERE period_year = ?
+            """, (year,))
         total = cursor.fetchone()[0]
         conn.close()
-        return total
+        return float(total or 0)
+
+    def delete_pph21(self, record_id: int) -> bool:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM pph21_log WHERE id = ?', (record_id,))
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return deleted
 
     # ═══════════════════════════════════════════════════════
     # DOCUMENTS
@@ -748,19 +795,31 @@ class TaxDB:
         conn = self._conn()
         cursor = conn.cursor()
 
-        # Total PPh due this month
+        # Total PPh due this month (withholding + PPh 21 log)
         cursor.execute("""
             SELECT COALESCE(SUM(pph_amount), 0) FROM withholding
             WHERE tax_year = ? AND tax_month = ?
         """, (year, month))
-        total_due = cursor.fetchone()[0]
+        total_withholding_month = float(cursor.fetchone()[0] or 0)
+        cursor.execute("""
+            SELECT COALESCE(SUM(pph21_amount), 0) FROM pph21_log
+            WHERE period_year = ? AND period_month = ?
+        """, (year, month))
+        total_pph21_month = float(cursor.fetchone()[0] or 0)
+        total_due = total_withholding_month + total_pph21_month
 
         # Total PPh this year
         cursor.execute("""
             SELECT COALESCE(SUM(pph_amount), 0) FROM withholding
             WHERE tax_year = ?
         """, (year,))
-        total_year = cursor.fetchone()[0]
+        total_withholding_year = float(cursor.fetchone()[0] or 0)
+        cursor.execute("""
+            SELECT COALESCE(SUM(pph21_amount), 0) FROM pph21_log
+            WHERE period_year = ?
+        """, (year,))
+        total_pph21_year = float(cursor.fetchone()[0] or 0)
+        total_year = total_withholding_year + total_pph21_year
 
         # Document counts
         cursor.execute("SELECT COUNT(*) FROM documents")
@@ -791,6 +850,8 @@ class TaxDB:
         return {
             'total_due_this_month': total_due,
             'total_year': total_year,
+            'total_pph21_month': total_pph21_month,
+            'total_pph21_year': total_pph21_year,
             'doc_count': doc_count,
             'doc_by_status': doc_by_status,
             'by_type': by_type,

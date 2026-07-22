@@ -481,6 +481,98 @@ class WithholdingScreen(BaseScreen):
 
 
 # ═══════════════════════════════════════════════════════════
+# PPH 21 LOG
+# ═══════════════════════════════════════════════════════════
+class Pph21Screen(BaseScreen):
+    def __init__(self, **kwargs):
+        super().__init__('pph21', 'Log PPh 21', **kwargs)
+
+    def build_ui(self):
+        add_btn = make_button('+ Tambah PPh 21', height=40)
+        add_btn.bind(on_release=lambda _b: self.show_add_popup())
+        self.body.add_widget(add_btn)
+
+        try:
+            rows, total = TaxDB().get_pph21_log(limit=50)
+            year_total = TaxDB().get_total_pph21(date.today().year)
+        except Exception as exc:
+            self.body.add_widget(make_label(f'Error DB: {exc}', 12, ERROR, False, 'left', 50))
+            return
+
+        self.body.add_widget(make_label(
+            f'{total} data · total {date.today().year}: Rp {year_total:,.0f}',
+            12, SUBTLE, False, 'left', 22,
+        ))
+        if not rows:
+            self.body.add_widget(make_label('Belum ada data PPh 21', 14, SUBTLE, False, 'center', 80))
+            return
+
+        for row in rows:
+            card = BoxLayout(size_hint_y=None, height=dp(52), padding=[dp(10), dp(6)], spacing=dp(6))
+            paint_card(card)
+            left = f"{row.get('employee_name', '-')} · {row.get('ptkp_status', '-')}"
+            period = f"{row.get('period_year')}-{int(row.get('period_month') or 0):02d}"
+            card.add_widget(make_label(f'{left}\n{period}', 11, TEXT, True, 'left', 42))
+            card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right', 42))
+            self.body.add_widget(card)
+
+    def show_add_popup(self):
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
+        content.add_widget(make_label('Tambah PPh 21', 15, TEXT, True, 'left', 28))
+        name = TextInput(hint_text='Nama pegawai', multiline=False, size_hint_y=None, height=dp(38))
+        gross = TextInput(hint_text='Gaji bruto', text='15000000', multiline=False, input_filter='float', size_hint_y=None, height=dp(38))
+        ptkp = Spinner(
+            text='TK0',
+            values=['TK0', 'TK1', 'TK2', 'TK3', 'K0', 'K1', 'K2', 'K3'],
+            size_hint_y=None,
+            height=dp(38),
+        )
+        for w in (name, gross, ptkp):
+            content.add_widget(w)
+        popup = Popup(title='PPh 21', content=content, size_hint=(0.92, 0.58), auto_dismiss=False)
+
+        def save(_btn):
+            try:
+                employee = (name.text or '').strip()
+                if not employee:
+                    raise ValueError('Nama pegawai harus diisi')
+                gaji = float(gross.text or 0)
+                status = ptkp.text
+                result = TaxCalculator().pph21(gaji, status)
+                pph_amount = float(result.get('pph_monthly') or 0)
+                deps = {'TK0': 0, 'TK1': 1, 'TK2': 2, 'TK3': 3, 'K0': 0, 'K1': 1, 'K2': 2, 'K3': 3}.get(status, 0)
+                now = date.today()
+                TaxDB().add_pph21(
+                    employee_name=employee,
+                    gross_salary=gaji,
+                    dependents=deps,
+                    ptkp_status=status,
+                    pph21_amount=pph_amount,
+                    year=now.year,
+                    month=now.month,
+                )
+                popup.dismiss()
+                self.on_enter()
+            except Exception as exc:
+                err = Popup(
+                    title='Error',
+                    content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                    size_hint=(0.8, 0.3),
+                )
+                err.open()
+
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
+        save_btn.bind(on_release=save)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
+        cancel_btn.bind(on_release=lambda _b: popup.dismiss())
+        actions.add_widget(save_btn)
+        actions.add_widget(cancel_btn)
+        content.add_widget(actions)
+        popup.open()
+
+
+# ═══════════════════════════════════════════════════════════
 # DOCUMENTS
 # ═══════════════════════════════════════════════════════════
 class DocumentsScreen(BaseScreen):
@@ -928,6 +1020,7 @@ class RootLayout(BoxLayout):
         self.sm.add_widget(DashboardScreen())
         self.sm.add_widget(CalculatorScreen())
         self.sm.add_widget(WithholdingScreen())
+        self.sm.add_widget(Pph21Screen())
         self.sm.add_widget(DocumentsScreen())
         self.sm.add_widget(CalendarScreen())
         self.add_widget(self.sm)
@@ -939,6 +1032,7 @@ class RootLayout(BoxLayout):
             ('dashboard', 'Beranda'),
             ('calculator', 'Hitung'),
             ('withholding', 'Log'),
+            ('pph21', 'PPh21'),
             ('documents', 'Dokumen'),
             ('calendar', 'Kalender'),
         ]:
