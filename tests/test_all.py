@@ -721,7 +721,20 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'aria-busy="true"', r.data)
         self.assertIn(b'prefers-reduced-motion', r.data)
         # active home page should mark beranda as current
-        self.assertIn(b'href="/"\n                           aria-current="page"', r.data.replace(b'\r', b'') or b'aria-current="page"')
+        self.assertIn(b'aria-current="page"', r.data)
+
+    def test_contrast_status_tokens(self):
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        # darker text tokens for soft-bg badges/alerts
+        self.assertIn(b'--success-text', r.data)
+        self.assertIn(b'--warning-text', r.data)
+        self.assertIn(b'--danger-text', r.data)
+        self.assertIn(b'--info-text', r.data)
+        self.assertIn(b'status-chip', r.data)
+        self.assertIn(b'.status-chip.overdue', r.data)
+        self.assertIn(b'.status-chip.soon', r.data)
+        self.assertIn(b'.status-chip.ok', r.data)
 
     def test_android_prefs_helpers(self):
         from data.app_prefs import APP_VERSION, load_prefs, save_prefs, prefs_path

@@ -31,7 +31,7 @@
             <div class="small mt-1">
                 {% for d in urgent_deadlines[:3] %}
                 <div>
-                    <span class="badge badge-deadline bg-{{ 'danger' if d.status == 'LEWAT' else 'warning' }}">{{ d.status }}</span>
+                    <span class="status-chip {{ 'overdue' if d.status == 'LEWAT' else 'soon' }}">{{ d.status }}</span>
                     {{ d.title }} — {{ d.date }}
                 </div>
                 {% endfor %}
@@ -109,8 +109,7 @@
                         </div>
                         <div class="text-end">
                             <div class="fw-semibold" style="font-size: 0.875rem;">{{ d.date }}</div>
-                            <span class="badge badge-deadline
-                                bg-{{ 'danger' if d.status == 'LEWAT' else 'warning' if d.status == 'SEGERA' else 'success' }}">
+                            <span class="status-chip {{ 'overdue' if d.status == 'LEWAT' else 'soon' if d.status == 'SEGERA' else 'ok' }}">
                                 {{ d.status }}
                             </span>
                         </div>
