@@ -5,6 +5,16 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.1.4] — 2026-07-22
+
+### Added
+- Android **Bagikan** setelah export CSV (`data/share_utils.py`)
+- Prefer Android share sheet (`ACTION_SEND`); fallback salin path ke clipboard
+
+### Changed
+- Popup hasil export: tombol Bagikan + Tutup
+- `buildozer.spec` / footer version → `1.1.4`
+
 ## [1.1.3] — 2026-07-22
 
 ### Added
