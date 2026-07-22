@@ -7,6 +7,14 @@
         <div class="subtitle">Catat potongan PPh 21 pegawai &mdash; {{ total }} data</div>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        {% set qs = [] %}
+        {% if year %}{% set _ = qs.append('year=' ~ year) %}{% endif %}
+        {% if month %}{% set _ = qs.append('month=' ~ month) %}{% endif %}
+        {% if q %}{% set _ = qs.append('q=' ~ q) %}{% endif %}
+        {% set filter_qs = qs|join('&') %}
+        <a href="/pph21/export{% if filter_qs %}?{{ filter_qs }}{% endif %}" class="btn btn-outline-copper">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
         <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
             <i class="bi bi-plus-lg"></i> Tambah
         </button>

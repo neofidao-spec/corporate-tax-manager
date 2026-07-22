@@ -253,12 +253,22 @@ class TaxDB:
         return rows, total
 
     def get_summary_by_period(self, year: int, month: int) -> Dict:
-        """Get tax payment summary for a specific period."""
+        """Get tax payment summary for a specific period (withholding + PPh 21)."""
+        try:
+            year = int(year)
+            month = int(month)
+        except (TypeError, ValueError):
+            raise ValueError('Tahun/bulan harus angka')
+        if month < 1 or month > 12:
+            raise ValueError('Bulan harus 1-12')
+
         conn = self._conn()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT tax_code, obj_type, COUNT(*) as count, SUM(amount) as total_amount, SUM(pph_amount) as total_tax
+            SELECT tax_code, obj_type, COUNT(*) as count,
+                   COALESCE(SUM(amount), 0) as total_amount,
+                   COALESCE(SUM(pph_amount), 0) as total_tax
             FROM withholding
             WHERE tax_year = ? AND tax_month = ?
             GROUP BY tax_code, obj_type
@@ -270,15 +280,39 @@ class TaxDB:
             SELECT COALESCE(SUM(pph_amount), 0) FROM withholding
             WHERE tax_year = ? AND tax_month = ?
         """, (year, month))
-        grand_total = cursor.fetchone()[0]
+        withholding_total = float(cursor.fetchone()[0] or 0)
+
+        cursor.execute("""
+            SELECT COUNT(*) as count,
+                   COALESCE(SUM(gross_salary), 0) as total_gross,
+                   COALESCE(SUM(pph21_amount), 0) as total_tax
+            FROM pph21_log
+            WHERE period_year = ? AND period_month = ?
+        """, (year, month))
+        pph21_row = dict(cursor.fetchone())
+        pph21_total = float(pph21_row.get('total_tax') or 0)
+        pph21_count = int(pph21_row.get('count') or 0)
+        pph21_gross = float(pph21_row.get('total_gross') or 0)
+
+        if pph21_count > 0:
+            details.append({
+                'tax_code': 'pph21',
+                'obj_type': 'Pegawai',
+                'count': pph21_count,
+                'total_amount': pph21_gross,
+                'total_tax': pph21_total,
+            })
 
         conn.close()
         return {
             'year': year,
             'month': month,
-            'grand_total': grand_total,
+            'grand_total': withholding_total + pph21_total,
+            'withholding_total': withholding_total,
+            'pph21_total': pph21_total,
             'details': details,
             'count': len(details),
+            'transaction_count': sum(int(d.get('count') or 0) for d in details),
         }
 
     def get_yearly_summary(self, year: int) -> List[Dict]:

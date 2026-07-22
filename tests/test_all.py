@@ -579,6 +579,57 @@ class TestWebApp(unittest.TestCase):
             if os.path.exists(path):
                 os.remove(path)
 
+    def test_pph21_export_csv(self):
+        self.client.post('/pph21/add', data={
+            'employee_name': 'Export Pegawai',
+            'gross_salary': 10000000,
+            'ptkp_status': 'TK0',
+            'year': 2026,
+            'month': 7,
+        }, follow_redirects=True)
+        r = self.client.get('/pph21/export?year=2026')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'text/csv', r.content_type.encode() if isinstance(r.content_type, str) else r.headers.get('Content-Type', '').encode())
+        self.assertIn(b'Export Pegawai', r.data)
+
+    def test_period_report_page(self):
+        r = self.client.get('/reports/period?year=2026&month=7')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Laporan periode', r.data)
+
+    def test_summary_by_period_includes_pph21(self):
+        path = '/data/data/com.termux/files/home/test_corporate_tax_summary.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            db.add_withholding('Vendor A', 100000000, 'Jasa', 'pph23', '2%', 'x')
+            db.add_pph21('Pegawai A', 15000000, 0, 'TK0', 500000, 2026, 7)
+            # Force period fields if add_withholding uses now
+            # re-read via summary using current year/month of inserted rows
+            rows, _ = db.get_all_withholding(limit=1)
+            year = rows[0]['tax_year']
+            month = rows[0]['tax_month']
+            # also insert pph21 for same period
+            db.add_pph21('Pegawai B', 10000000, 0, 'TK0', 400000, year, month)
+            s = db.get_summary_by_period(year, month)
+            self.assertGreaterEqual(s['grand_total'], 500000)
+            codes = {d['tax_code'] for d in s['details']}
+            self.assertIn('pph23', codes)
+            self.assertIn('pph21', codes)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_calculator_summary_helper(self):
+        from data.tax_calculator import TaxCalculator
+        calc = TaxCalculator()
+        r = calc.pph23(50_000_000, 'Jasa')
+        text = calc.summary(r)
+        self.assertIn('Pph', text)
+        self.assertIn('Rp', text)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

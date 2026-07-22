@@ -663,6 +663,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}" href="/reports/period">
+                            <i class="bi bi-bar-chart"></i> Laporan
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/documents') %}active{% endif %}" href="/documents">
                             <i class="bi bi-folder2"></i> Dokumen
                         </a>

@@ -104,6 +104,9 @@
                 <i class="bi bi-check-circle me-1 text-accent"></i>
                 Hasil PPh 21 {{ 'non pegawai' if 'non' in calc_type else 'pegawai tetap' }}
             </div>
+            {% if result_summary %}
+            <pre class="mb-2 small text-muted" style="white-space:pre-wrap;">{{ result_summary }}</pre>
+            {% endif %}
             <div class="value-line"><span>Status PTKP</span><span>{{ results.status }}</span></div>
             <div class="value-line"><span>PTKP</span><span>Rp {{ "{:,.0f}".format(results.ptkp) }}</span></div>
             <div class="value-line"><span>PKP</span><span>Rp {{ "{:,.0f}".format(results.pkp) }}</span></div>

@@ -404,7 +404,7 @@ class CalculatorScreen(BaseScreen):
                 lines.append(f"Diterima: Rp {result.get('diterima', 0):,.0f}")
             if 'ppn' in result:
                 lines.append(f"PPN terkait: Rp {result.get('ppn', 0):,.0f}")
-            self.result_label.text = '\n'.join(lines)
+            self.result_label.text = '\n'.join(lines) if lines else TaxCalculator().summary(result)
         except Exception as exc:
             self.result_label.text = f'Error: {exc}'
 

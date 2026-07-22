@@ -214,7 +214,12 @@ def create_app(testing=False):
             except Exception as e:
                 flash(f'Kesalahan perhitungan: {str(e)}', 'error')
 
-        return render_template('calculator.html', results=results, calc_type=calc_type)
+        return render_template(
+            'calculator.html',
+            results=results,
+            calc_type=calc_type,
+            result_summary=calc.summary(results) if results else '',
+        )
 
     # ══════════════════════════════════════════════════
     # ROUTES: Withholding (PPh 23/26/Final)
@@ -349,6 +354,66 @@ def create_app(testing=False):
         except Exception as e:
             flash(f'Gagal menghapus: {e}', 'error')
         return redirect(url_for('pph21_log'))
+
+    @app.route('/pph21/export')
+    def export_pph21():
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        q = (request.args.get('q') or '').strip() or None
+        records, _ = g.db.get_pph21_log(
+            limit=10000, offset=0, year=year, month=month, q=q,
+        )
+        output = StringIO()
+        w = csv.writer(output)
+        w.writerow([
+            'ID', 'Pegawai', 'Gaji Bruto', 'Tanggungan', 'PTKP',
+            'PPh 21', 'Tahun', 'Bulan', 'Tgl Input',
+        ])
+        for r in records:
+            w.writerow([
+                r['id'], r['employee_name'], r['gross_salary'], r['dependents'],
+                r['ptkp_status'], r['pph21_amount'], r['period_year'],
+                r['period_month'], r['created_at'],
+            ])
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment;filename=pph21_export.csv'},
+        )
+
+    @app.route('/reports/period')
+    def period_report():
+        now = date.today()
+        year = request.args.get('year', now.year, type=int) or now.year
+        month = request.args.get('month', now.month, type=int) or now.month
+        if month < 1 or month > 12:
+            month = now.month
+        try:
+            summary = g.db.get_summary_by_period(year, month)
+        except ValueError as e:
+            flash(str(e), 'error')
+            summary = {
+                'year': year, 'month': month, 'grand_total': 0,
+                'withholding_total': 0, 'pph21_total': 0,
+                'details': [], 'count': 0, 'transaction_count': 0,
+            }
+        labels = {1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
+                  7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'}
+        prev_m = month - 1 if month > 1 else 12
+        prev_y = year if month > 1 else year - 1
+        next_m = month + 1 if month < 12 else 1
+        next_y = year if month < 12 else year + 1
+        return render_template(
+            'period_report.html',
+            summary=summary,
+            month_labels=labels,
+            selected_year=year,
+            selected_month=month,
+            prev_y=prev_y,
+            prev_m=prev_m,
+            next_y=next_y,
+            next_m=next_m,
+        )
 
     @app.route('/withholding/export')
     def export_withholding():
