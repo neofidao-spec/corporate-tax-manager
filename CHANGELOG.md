@@ -5,6 +5,18 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.1.1] — 2026-07-22
+
+### Added
+- Density toggle web (**Ringkas / Lega**) + skeleton loading shimmer
+- Density compact Android (tombol Beranda) dengan **persist ke `ctm_prefs.json`**
+- Empty-state konsisten (judul + penjelasan + CTA) di semua halaman list/report
+- Banner **Reminder deadline** (LEWAT/SEGERA) di dashboard web + Android
+
+### Changed
+- Decision-first KPI hierarchy (hero metric) di dashboard & laporan
+- `buildozer.spec` / footer version → `1.1.1`
+
 ## [1.1.0] — 2026-07-22
 
 ### Added

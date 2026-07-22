@@ -28,6 +28,7 @@ from kivy.graphics import Color, RoundedRectangle
 
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
+from data.app_prefs import APP_VERSION, load_prefs as _load_prefs, save_prefs as _save_prefs, prefs_path as _prefs_path_impl
 
 # ═══════════════════════════════════════════════════════════
 # THEME — Neutral (eye-friendly, matches web)
@@ -55,6 +56,26 @@ CREAM = BG
 CREAM_D = SURFACE_MUTED
 COPPER = ACCENT
 PAPER = SURFACE
+
+
+def _prefs_path():
+    """User prefs file — works on desktop and Android (user_data_dir)."""
+    try:
+        app = App.get_running_app()
+        if app and getattr(app, 'user_data_dir', None):
+            return _prefs_path_impl(user_data_dir=app.user_data_dir)
+    except Exception:
+        pass
+    base = os.path.dirname(os.path.abspath(__file__))
+    return _prefs_path_impl(fallback_dir=base)
+
+
+def load_prefs():
+    return _load_prefs(path=_prefs_path())
+
+
+def save_prefs(prefs):
+    return _save_prefs(prefs, path=_prefs_path())
 
 
 def make_label(text, size=14, color=TEXT, bold=False, halign='left', height=None):
@@ -139,6 +160,13 @@ class BaseScreen(Screen):
 
     def on_enter(self, *args):
         self.body.clear_widgets()
+        # Apply persisted density before building content
+        try:
+            root = App.get_running_app().root
+            if hasattr(root, 'apply_density_to_screen'):
+                root.apply_density_to_screen(self)
+        except Exception:
+            pass
         try:
             self.build_ui()
         except Exception as exc:
@@ -219,7 +247,10 @@ class DashboardScreen(BaseScreen):
         report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
         docs_btn = make_button('Dokumen', SURFACE_MUTED, TEXT, 42)
         docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
-        dens_btn = make_button('Ringkas', SURFACE_MUTED, TEXT, 42)
+        dens_btn = make_button(
+            'Lega' if App.get_running_app().root.compact else 'Ringkas',
+            SURFACE_MUTED, TEXT, 42,
+        )
         dens_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_density())
         actions.add_widget(report_btn)
         actions.add_widget(docs_btn)
@@ -1156,7 +1187,8 @@ class ErrorScreen(Screen):
 class RootLayout(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
-        self.compact = False
+        prefs = load_prefs()
+        self.compact = bool(prefs.get('compact', False))
         self.sm = ScreenManager(transition=NoTransition())
         self.sm.add_widget(DashboardScreen())
         self.sm.add_widget(CalculatorScreen())
@@ -1196,10 +1228,7 @@ class RootLayout(BoxLayout):
             button.background_color = PRIMARY if selected else SURFACE_MUTED
             button.color = WHITE if selected else TEXT
 
-    def toggle_density(self):
-        """Compact mode: slightly tighter body spacing on current screen."""
-        self.compact = not self.compact
-        screen = self.sm.current_screen
+    def apply_density_to_screen(self, screen):
         if not hasattr(screen, 'body'):
             return
         if self.compact:
@@ -1208,6 +1237,15 @@ class RootLayout(BoxLayout):
         else:
             screen.body.spacing = dp(8)
             screen.body.padding = [dp(14), dp(10), dp(14), dp(16)]
+
+    def toggle_density(self):
+        """Compact mode: slightly tighter body spacing; persisted to local prefs."""
+        self.compact = not self.compact
+        prefs = load_prefs()
+        prefs['compact'] = self.compact
+        save_prefs(prefs)
+        screen = self.sm.current_screen
+        self.apply_density_to_screen(screen)
         if hasattr(screen, 'on_enter'):
             screen.on_enter()
 
@@ -1218,7 +1256,7 @@ class RootLayout(BoxLayout):
 class CorporateTaxApp(App):
     def build(self):
         Window.clearcolor = CREAM
-        self.title = 'Corporate Tax Manager'
+        self.title = f'Corporate Tax Manager {APP_VERSION}'
         try:
             TaxDB().init_tables()
             return RootLayout()

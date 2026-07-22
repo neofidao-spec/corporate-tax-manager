@@ -708,6 +708,28 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'is-loading', r.data)
         self.assertIn(b'ctm_density', r.data)
         self.assertIn(b'app-content-ready', r.data)
+        self.assertIn(b'v1.1.1', r.data)
+
+    def test_android_prefs_helpers(self):
+        from data.app_prefs import APP_VERSION, load_prefs, save_prefs, prefs_path
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as td:
+            path = prefs_path(user_data_dir=td)
+            self.assertEqual(load_prefs(path=path), {})
+            self.assertTrue(save_prefs({'compact': True}, path=path))
+            self.assertTrue(load_prefs(path=path).get('compact'))
+            self.assertTrue(save_prefs({'compact': False}, path=path))
+            self.assertFalse(load_prefs(path=path).get('compact'))
+            # corrupt file falls back to empty dict
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write('{not-json')
+            self.assertEqual(load_prefs(path=path), {})
+            # missing parent handled
+            nested = os.path.join(td, 'nested', 'ctm_prefs.json')
+            self.assertTrue(save_prefs({'x': 1}, path=nested))
+            self.assertEqual(load_prefs(path=nested).get('x'), 1)
+        self.assertEqual(APP_VERSION, '1.1.1')
 
 
 if __name__ == '__main__':
