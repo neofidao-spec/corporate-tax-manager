@@ -51,7 +51,13 @@
     {% if docs %}
     <div class="doc-grid">
         {% for d in docs %}
-        <div class="doc-card">
+        <div class="doc-card" data-doc-id="{{ d.id }}"
+             data-doc-title="{{ d.title }}"
+             data-doc-category="{{ d.category }}"
+             data-doc-status="{{ d.status }}"
+             data-doc-tax-year="{{ d.tax_year or '' }}"
+             data-doc-tax-month="{{ d.tax_month or '' }}"
+             data-doc-notes="{{ d.notes or '' }}">
             <div class="d-flex justify-content-between align-items-start gap-2">
                 <div class="doc-title">{{ d.title }}</div>
                 <span class="badge bg-{{ 'success' if d.status == 'Lengkap' else 'warning' if d.status == 'Kurang' else 'info' }}">
@@ -75,7 +81,7 @@
             {% endif %}
             <div class="doc-actions">
                 <button type="button" class="btn btn-sm btn-outline-copper"
-                        data-bs-toggle="modal" data-bs-target="#editModal{{ d.id }}">
+                        onclick="openEditDoc(this.closest('.doc-card'))">
                     <i class="bi bi-pencil"></i>
                 </button>
                 <form method="POST" action="/documents/{{ d.id }}/status?page={{ page }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
@@ -92,60 +98,6 @@
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
-            </div>
-        </div>
-
-        <!-- Edit Modal -->
-        <div class="modal fade" id="editModal{{ d.id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="/documents/{{ d.id }}/edit?page={{ page }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Edit dokumen</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Nama dokumen <span class="text-danger">*</span></label>
-                                <input type="text" name="title" class="form-control" value="{{ d.title }}" required>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Kategori</label>
-                                    <select name="category" class="form-select">
-                                        {% for cat in ['Faktur Pajak','SPT Tahunan','SPT Masa','Bukti Potong','Laporan','Lainnya','Umum'] %}
-                                        <option value="{{ cat }}" {% if d.category == cat %}selected{% endif %}>{{ cat }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Status</label>
-                                    <select name="status" class="form-select">
-                                        {% for s in ['Lengkap','Kurang','Arsip','Dalam Proses'] %}
-                                        <option value="{{ s }}" {% if d.status == s %}selected{% endif %}>{{ s }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tahun pajak</label>
-                                    <input type="number" name="tax_year" class="form-control" value="{{ d.tax_year or '' }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Bulan pajak</label>
-                                    <input type="number" name="tax_month" class="form-control" min="1" max="12" value="{{ d.tax_month or '' }}">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Catatan</label>
-                                    <textarea name="notes" class="form-control" rows="2">{{ d.notes or '' }}</textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-copper">Simpan perubahan</button>
-                        </div>
-                    </form>
-                </div>
             </div>
         </div>
         {% endfor %}
@@ -173,6 +125,60 @@
         </button>
     </div>
     {% endif %}
+</div>
+
+<!-- Single reusable Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="" id="editForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit dokumen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nama dokumen <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="editTitle" class="form-control" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Kategori</label>
+                            <select name="category" id="editCategory" class="form-select">
+                                {% for cat in ['Faktur Pajak','SPT Tahunan','SPT Masa','Bukti Potong','Laporan','Lainnya','Umum'] %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                {% for s in ['Lengkap','Kurang','Arsip','Dalam Proses'] %}
+                                <option value="{{ s }}">{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tahun pajak</label>
+                            <input type="number" name="tax_year" id="editTaxYear" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bulan pajak</label>
+                            <input type="number" name="tax_month" id="editTaxMonth" class="form-control" min="1" max="12">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Catatan</label>
+                            <textarea name="notes" id="editNotes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-copper">Simpan perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Modal Tambah -->
@@ -232,4 +238,27 @@
         </div>
     </div>
 </div>
+
+<script>
+function openEditDoc(card) {
+    const id = card.getAttribute('data-doc-id');
+    const currentParams = new URLSearchParams(window.location.search);
+
+    document.getElementById('editTitle').value = card.getAttribute('data-doc-title') || '';
+    document.getElementById('editCategory').value = card.getAttribute('data-doc-category') || 'Faktur Pajak';
+    document.getElementById('editStatus').value = card.getAttribute('data-doc-status') || 'Lengkap';
+    document.getElementById('editTaxYear').value = card.getAttribute('data-doc-tax-year') || '';
+    document.getElementById('editTaxMonth').value = card.getAttribute('data-doc-tax-month') || '';
+    document.getElementById('editNotes').value = card.getAttribute('data-doc-notes') || '';
+
+    let actionUrl = '/documents/' + id + '/edit?page=' + (currentParams.get('page') || '1');
+    if (currentParams.get('category')) actionUrl += '&category=' + encodeURIComponent(currentParams.get('category'));
+    if (currentParams.get('status')) actionUrl += '&status=' + encodeURIComponent(currentParams.get('status'));
+    if (currentParams.get('q')) actionUrl += '&q=' + encodeURIComponent(currentParams.get('q'));
+    document.getElementById('editForm').action = actionUrl;
+
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+    modal.show();
+}
+</script>
 {% endblock %}

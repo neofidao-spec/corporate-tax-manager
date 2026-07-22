@@ -596,12 +596,18 @@ class WithholdingScreen(BaseScreen):
 
         vendor = TextInput(hint_text='Nama Vendor', multiline=False, size_hint_y=None, height=dp(38))
         amount = TextInput(hint_text='Jumlah Bruto (Rp)', multiline=False, input_filter='float', size_hint_y=None, height=dp(38))
-        obj_type = Spinner(text='Jasa', values=['Jasa', 'Sewa', 'Dividen', 'Bunga', 'Royalti'], size_hint_y=None, height=dp(38))
-        content.add_widget(vendor)
-        content.add_widget(amount)
-        content.add_widget(obj_type)
+        obj_type = Spinner(text='Jasa', values=['Jasa', 'Sewa', 'Dividen', 'Bunga', 'Royalti', 'Hadiah'], size_hint_y=None, height=dp(38))
+        tax_code = Spinner(text='pph23', values=['pph23', 'pph26', 'pph_final'], size_hint_y=None, height=dp(38))
+        tariff_sel = Spinner(text='2%', values=['2%', '15%', '20%', '10%', '0.5%'], size_hint_y=None, height=dp(38))
+        description = TextInput(hint_text='Keterangan', multiline=True, size_hint_y=None, height=dp(60))
+        for w in (vendor, amount, obj_type, tax_code, tariff_sel, description):
+            content.add_widget(w)
 
-        popup = Popup(title='PPh 23/26', content=content, size_hint=(0.9, 0.55), auto_dismiss=False)
+        # Scrollable wrapper for keyboard handling
+        scroll = ScrollView(do_scroll_x=False, size_hint=(1, 1))
+        scroll.add_widget(content)
+
+        popup = Popup(title='PPh 23/26', content=scroll, size_hint=(0.92, 0.72), auto_dismiss=False)
 
         def save(_btn):
             try:
@@ -609,9 +615,9 @@ class WithholdingScreen(BaseScreen):
                     vendor=vendor.text.strip() or 'Vendor',
                     amount=float(amount.text or 0),
                     obj_type=obj_type.text,
-                    tax_code='pph23',
-                    tariff_label='2%',
-                    description='',
+                    tax_code=tax_code.text,
+                    tariff_label=tariff_sel.text,
+                    description=(description.text or '').strip()[:200],
                 )
                 popup.dismiss()
                 self.on_enter()
@@ -696,9 +702,18 @@ class Pph21Screen(BaseScreen):
             size_hint_y=None,
             height=dp(38),
         )
-        for w in (name, gross, ptkp):
+        now = date.today()
+        period_year = TextInput(hint_text='Tahun', text=str(now.year), multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        period_month = TextInput(hint_text='Bulan (1-12)', text=str(now.month), multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        pph_input = TextInput(hint_text='PPh 21 (opsional — kosongkan untuk auto)', multiline=False, input_filter='float', size_hint_y=None, height=dp(38))
+        for w in (name, gross, ptkp, period_year, period_month, pph_input):
             content.add_widget(w)
-        popup = Popup(title='PPh 21', content=content, size_hint=(0.92, 0.58), auto_dismiss=False)
+
+        # Scrollable wrapper for keyboard handling
+        scroll = ScrollView(do_scroll_x=False, size_hint=(1, 1))
+        scroll.add_widget(content)
+
+        popup = Popup(title='PPh 21', content=scroll, size_hint=(0.92, 0.76), auto_dismiss=False)
 
         def save(_btn):
             try:
@@ -707,18 +722,25 @@ class Pph21Screen(BaseScreen):
                     raise ValueError('Nama pegawai harus diisi')
                 gaji = float(gross.text or 0)
                 status = ptkp.text
-                result = TaxCalculator().pph21(gaji, status)
-                pph_amount = float(result.get('pph_monthly') or 0)
+                year = int(period_year.text or now.year)
+                month = int(period_month.text or now.month)
+                if month < 1 or month > 12:
+                    raise ValueError('Bulan harus 1-12')
+                pph_val = (pph_input.text or '').strip()
+                if pph_val:
+                    pph_amount = float(pph_val)
+                else:
+                    result = TaxCalculator().pph21(gaji, status)
+                    pph_amount = float(result.get('pph_monthly') or 0)
                 deps = {'TK0': 0, 'TK1': 1, 'TK2': 2, 'TK3': 3, 'K0': 0, 'K1': 1, 'K2': 2, 'K3': 3}.get(status, 0)
-                now = date.today()
                 TaxDB().add_pph21(
                     employee_name=employee,
                     gross_salary=gaji,
                     dependents=deps,
                     ptkp_status=status,
                     pph21_amount=pph_amount,
-                    year=now.year,
-                    month=now.month,
+                    year=year,
+                    month=month,
                 )
                 popup.dismiss()
                 self.on_enter()
