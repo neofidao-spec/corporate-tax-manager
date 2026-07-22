@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="fw-bold" style="color: var(--navy);">Kalender Pajak</h2>
+        <p class="text-muted">{{ month_name }} {{ year }}</p>
+        <hr class="opacity-25">
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-bordered text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>Sen</th>
+                    <th>Sel</th>
+                    <th>Rab</th>
+                    <th>Kam</th>
+                    <th>Jum</th>
+                    <th>Sab</th>
+                    <th>Min</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in cal %}
+                <tr>
+                    {% for day in week %}
+                    <td class="{% if day == today.day and month == today.month and year == today.year %}table-warning fw-bold{% elif day in deadlines and day >= today.day %}table-info{% elif day in deadlines and day < today.day %}table-danger text-muted{% endif %}">
+                        {% if day > 0 %}
+                            <div style="font-size: 1.1rem;">{{ day }}</div>
+                            {% if day in deadlines %}
+                            <small class="badge bg-{% if day < today.day %}danger{% else %}primary{% endif %}">
+                                {{ deadlines[day] }}
+                            </small>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header py-3">Legenda Deadline</div>
+    <div class="card-body">
+        <ul class="list-unstyled mb-0">
+            <li><span class="badge bg-primary">PPN</span> &mdash; Tanggal 10 setiap bulan</li>
+            <li><span class="badge bg-primary">PPh Final</span> &mdash; Tanggal 15</li>
+            <li><span class="badge bg-primary">PPh 21/23</span> &mdash; Tanggal 20</li>
+            <li><span class="badge bg-primary">PPh 26</span> &mdash; Tanggal 21</li>
+            <li class="mt-2"><span class="badge bg-warning text-dark">Hari Ini</span> &mdash; Tanggal aktif</li>
+            <li><span class="badge bg-danger">Deadline Terlewat</span> &mdash; Perlu tindakan</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

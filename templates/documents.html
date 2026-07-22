@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold" style="color: var(--navy);">Dokumen Pajak</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
+            + Tambah Dokumen
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header py-3">Arsip Dokumen Perpajakan</div>
+    <div class="card-body">
+        {% if docs %}
+        <div class="table-responsive">
+            <table class="table table-hover table-custom">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nama Dokumen</th>
+                        <th>Kategori</th>
+                        <th>Status</th>
+                        <th>Tanggal</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in docs %}
+                    <tr>
+                        <td>{{ d.id }}</td>
+                        <td>{{ d.title }}</td>
+                        <td><span class="badge bg-secondary">{{ d.category }}</span></td>
+                        <td><span class="badge bg-{{ 'success' if d.status == 'Lengkap' else 'warning' if d.status == 'Kurang' else 'info' }}">{{ d.status }}</span></td>
+                        <td>{{ d.created_at[:10] }}</td>
+                        <td>
+                            <a href="{{ url_for('delete_document', did=d.id) }}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Hapus dokumen ini?')">Hapus</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">Belum ada dokumen pajak yang tercatat.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Tambah -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('add_document') }}" method="POST">
+                <div class="modal-header" style="background: var(--navy); color: var(--cream);">
+                    <h5 class="modal-title">Tambah Dokumen</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Dokumen</label>
+                        <input type="text" name="title" class="form-control" placeholder="Contoh: Faktur Pajak Maret 2026" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kategori</label>
+                        <select name="category" class="form-select">
+                            <option>Faktur Pajak</option>
+                            <option>SPT Tahunan</option>
+                            <option>SPT Masa</option>
+                            <option>Bukti Potong</option>
+                            <option>Laporan</option>
+                            <option>Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option>Lengkap</option>
+                            <option>Kurang</option>
+                            <option>Arsip</option>
+                            <option>Dalam Proses</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-copper">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

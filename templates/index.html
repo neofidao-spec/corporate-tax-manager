@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="fw-bold" style="color: var(--navy);">Beranda</h2>
+        <hr class="opacity-25">
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="label">PPh 23 Bulan {{ month }}</div>
+                <div class="value">Rp {{ "{:,.0f}".format(pph23_total) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="label">Total Potongan</div>
+                <div class="value">{{ records_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="label">Dokumen Tercatat</div>
+                <div class="value">{{ docs_total }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header py-3">
+        <i class="bi bi-calendar3 me-2"></i> Deadline Pajak Mendatang
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-borderless">
+                <thead>
+                    <tr>
+                        <th>Jenis</th>
+                        <th>Tanggal</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deadlines %}
+                    <tr>
+                        <td>{{ d.title }}</td>
+                        <td>{{ d.date }}</td>
+                        <td>
+                            <span class="badge deadline-badge bg-{{ 'danger' if d.status == 'LEWAT' else 'warning' if d.status == 'SEGERA' else 'success' }}">
+                                {{ d.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header py-3">Akses Cepat</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="/calculator" class="btn btn-copper w-100 py-3">
+                            Kalkulator Pajak
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/withholding" class="btn btn-outline-secondary w-100 py-3">
+                            Catat PPh 23/26
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/documents" class="btn btn-outline-secondary w-100 py-3">
+                            Manajemen Dokumen
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/calendar" class="btn btn-outline-secondary w-100 py-3">
+                            Kalender Pajak
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

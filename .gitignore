@@ -1,0 +1,27 @@
+# Build artifacts
+bin/
+*.apk
+*.aab
+*.keystore
+
+# Buildozer cache (SDK/NDK)
+.buildozer/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Database (local data, not code)
+tax_data.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
