@@ -67,6 +67,30 @@
             --text-light: var(--text-faint);
         }
 
+
+        /* ── Dark mode ── */
+        [data-theme="dark"] {
+            --bg: #121820;
+            --bg-elevated: #1E293B;
+            --border: #2D3B4F;
+            --border-strong: #3E4F65;
+            --text: #E2E8F0;
+            --text-secondary: #B0BED0;
+            --text-muted: #8899AF;
+            --text-faint: #6B7A8D;
+            --primary: #8EACCE;
+            --primary-hover: #7B9ABD;
+            --primary-soft: #253548;
+            --accent: #A0BFE0;
+            --accent-soft: #1F3045;
+            --surface-muted: #1A2636;
+            --surface-hover: #243348;
+            --shadow: 0 1px 3px rgba(0,0,0,0.20);
+            --shadow-hover: 0 2px 8px rgba(0,0,0,0.30);
+            --focus-ring: 0 0 0 3px rgba(160,191,224,0.28);
+            --table-stripe: rgba(255,255,255,0.025);
+        }
+
         * { box-sizing: border-box; }
 
         body {
@@ -1051,7 +1075,16 @@
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
-                        <button type="button" id="densityToggle" class="density-toggle"
+                                            <li class="nav-item">
+                        <button type="button" id="darkModeToggle" class="density-toggle"
+                                aria-pressed="false"
+                                aria-label="Ubah mode gelap/terang"
+                                title="Mode gelap/terang">
+                            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+                        </button>
+                    </li>
+
+                    <button type="button" id="densityToggle" class="density-toggle"
                                 aria-pressed="false"
                                 aria-label="Ubah kepadatan tampilan"
                                 title="Ubah kepadatan tampilan">
@@ -1124,6 +1157,33 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     (function () {
+
+        var DARK_KEY = 'ctm_dark_mode';
+        var darkBtn = document.getElementById('darkModeToggle');
+        
+        function applyDarkMode(on) {
+            document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+            if (darkBtn) {
+                darkBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                darkBtn.setAttribute('aria-label', on ? 'Ubah ke mode terang' : 'Ubah ke mode gelap');
+            }
+        }
+        
+        try {
+            applyDarkMode(localStorage.getItem(DARK_KEY) === '1');
+        } catch (e) {
+            applyDarkMode(false);
+        }
+        
+        if (darkBtn) {
+            darkBtn.addEventListener('click', function () {
+                var next = document.documentElement.getAttribute('data-theme') !== 'dark';
+                applyDarkMode(next);
+                try { localStorage.setItem(DARK_KEY, next ? '1' : '0'); } catch (e) {}
+            });
+        }
+
+
         var KEY = 'ctm_density';
         var body = document.body;
         var btn = document.getElementById('densityToggle');

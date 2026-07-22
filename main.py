@@ -26,6 +26,8 @@ from kivy.utils import get_color_from_hex as hex2rgb
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle
+from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
 
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
@@ -56,6 +58,28 @@ WARNING = hex2rgb('#8A5A0A')
 BORDER = hex2rgb('#E2E8F0')
 SURFACE_HOVER = hex2rgb('#FAFBFC')
 
+# Dark theme tokens
+BG_D = hex2rgb('#121820')
+SURFACE_D = hex2rgb('#1E293B')
+SURFACE_MUTED_D = hex2rgb('#1A2636')
+PRIMARY_D = hex2rgb('#8EACCE')
+PRIMARY_HOVER_D = hex2rgb('#7B9ABD')
+ACCENT_D = hex2rgb('#A0BFE0')
+TEXT_D = hex2rgb('#E2E8F0')
+TEXT_SECONDARY_D = hex2rgb('#B0BED0')
+SUBTLE_D = hex2rgb('#8899AF')
+BORDER_D = hex2rgb('#2D3B4F')
+SURFACE_HOVER_D = hex2rgb('#243348')
+
+# Active theme (swapped by toggle_dark_mode)
+THEME = {
+    'bg': BG, 'surface': SURFACE, 'surface_muted': SURFACE_MUTED,
+    'primary': PRIMARY, 'primary_hover': PRIMARY_HOVER, 'accent': ACCENT,
+    'text': TEXT, 'text_secondary': TEXT_SECONDARY, 'subtle': SUBTLE,
+    'border': BORDER, 'surface_hover': SURFACE_HOVER,
+    'is_dark': False
+}
+
 # Backward-compatible aliases used in screens
 NAVY = PRIMARY
 CHARCOAL = TEXT_SECONDARY
@@ -85,11 +109,11 @@ def save_prefs(prefs):
     return _save_prefs(prefs, path=_prefs_path())
 
 
-def make_label(text, size=14, color=TEXT, bold=False, halign='left', height=None):
+def make_label(text, size=14, color=None, bold=False, halign='left', height=None):
     widget = Label(
         text=str(text),
         font_size=sp(size),
-        color=color,
+        color=color or THEME['text'],
         bold=bold,
         halign=halign,
         valign='middle',
@@ -101,14 +125,14 @@ def make_label(text, size=14, color=TEXT, bold=False, halign='left', height=None
     return widget
 
 
-def make_button(text, bg=PRIMARY, fg=WHITE, height=42):
+def make_button(text, bg=None, fg=None, height=42):
     return Button(
         text=text,
         size_hint_y=None,
         height=dp(height),
         background_normal='',
-        background_color=bg,
-        color=fg,
+        background_color=bg or THEME['primary'],
+        color=fg or WHITE,
         font_size=sp(12.5),
         bold=True,
     )
@@ -117,7 +141,7 @@ def make_button(text, bg=PRIMARY, fg=WHITE, height=42):
 def paint_card(widget):
     widget.canvas.before.clear()
     with widget.canvas.before:
-        Color(*SURFACE)
+        Color(*THEME['surface'])
         widget._card_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(12)])
     widget.bind(
         pos=lambda w, _v: setattr(w._card_bg, 'pos', w.pos),
@@ -125,10 +149,14 @@ def paint_card(widget):
     )
 
 
-def paint_bar(widget, color):
+def paint_bar(widget, color=None):
     widget.canvas.before.clear()
     with widget.canvas.before:
-        Color(*color)
+        # Use dynamic surface color when called with static SURFACE token
+        if color is SURFACE or color is SURFACE_D:
+            Color(*THEME['surface'])
+        else:
+            Color(*(color or THEME['surface']))
         widget._bar_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[0])
     widget.bind(
         pos=lambda w, _v: setattr(w._bar_bg, 'pos', w.pos),
@@ -138,6 +166,15 @@ def paint_bar(widget, color):
 
 def section_label(text):
     return make_label(text.upper(), 11, SUBTLE, True, 'left', 22)
+
+
+def accessible(widget, description):
+    """Set accessibility description for TalkBack on Android."""
+    try:
+        widget.description_for_accessibility = description
+    except Exception:
+        pass
+    return widget
 
 
 # ═══════════════════════════════════════════════════════════
@@ -259,9 +296,14 @@ class DashboardScreen(BaseScreen):
             SURFACE_MUTED, TEXT, 42,
         )
         dens_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_density())
+
+        dark_label = 'Terang' if THEME['is_dark'] else 'Gelap'
+        dark_btn = make_button(f'{dark_label}', SURFACE_MUTED, TEXT, 42)
+        dark_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_dark_mode())
         actions.add_widget(report_btn)
         actions.add_widget(docs_btn)
         actions.add_widget(dens_btn)
+        actions.add_widget(dark_btn)
         self.body.add_widget(actions)
 
         self.body.add_widget(section_label('Deadline mendatang'))
@@ -1446,7 +1488,8 @@ class RootLayout(BoxLayout):
                 WHITE if screen_name == 'dashboard' else TEXT,
                 40,
             )
-            button.bind(on_release=lambda _b, n=screen_name: self.goto(n))
+            accessible(button, f'Navigasi ke {title}')
+            button.bind(on_release=lambda _b, s=screen_name: self.goto(s))
             nav.add_widget(button)
             self.nav_buttons[screen_name] = button
         self.add_widget(nav)
@@ -1491,13 +1534,50 @@ class RootLayout(BoxLayout):
         if hasattr(screen, 'on_enter'):
             screen.on_enter()
 
+    def toggle_dark_mode(self):
+        """Dark mode: swap THEME tokens and rebuild screens."""
+        is_dark = not THEME['is_dark']
+        if is_dark:
+            THEME['bg'] = BG_D
+            THEME['surface'] = SURFACE_D
+            THEME['surface_muted'] = SURFACE_MUTED_D
+            THEME['primary'] = PRIMARY_D
+            THEME['primary_hover'] = PRIMARY_HOVER_D
+            THEME['accent'] = ACCENT_D
+            THEME['text'] = TEXT_D
+            THEME['text_secondary'] = TEXT_SECONDARY_D
+            THEME['subtle'] = SUBTLE_D
+            THEME['border'] = BORDER_D
+            THEME['surface_hover'] = SURFACE_HOVER_D
+            Window.clearcolor = BG_D
+        else:
+            THEME['bg'] = BG
+            THEME['surface'] = SURFACE
+            THEME['surface_muted'] = SURFACE_MUTED
+            THEME['primary'] = PRIMARY
+            THEME['primary_hover'] = PRIMARY_HOVER
+            THEME['accent'] = ACCENT
+            THEME['text'] = TEXT
+            THEME['text_secondary'] = TEXT_SECONDARY
+            THEME['subtle'] = SUBTLE
+            THEME['border'] = BORDER
+            THEME['surface_hover'] = SURFACE_HOVER
+            Window.clearcolor = BG
+        THEME['is_dark'] = is_dark
+        prefs = load_prefs()
+        prefs['dark_mode'] = is_dark
+        save_prefs(prefs)
+        screen = self.sm.current_screen
+        if hasattr(screen, 'on_enter'):
+            screen.on_enter()
+
 
 # ═══════════════════════════════════════════════════════════
 # APP
 # ═══════════════════════════════════════════════════════════
 class CorporateTaxApp(App):
     def build(self):
-        Window.clearcolor = CREAM
+        Window.clearcolor = THEME['bg']
         self.title = f'Corporate Tax Manager {APP_VERSION}'
         try:
             TaxDB().init_tables()
