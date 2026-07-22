@@ -29,7 +29,11 @@ from kivy.graphics import Color, RoundedRectangle
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
 from data.app_prefs import APP_VERSION, load_prefs as _load_prefs, save_prefs as _save_prefs, prefs_path as _prefs_path_impl
-from data.export_utils import export_pph21_csv
+from data.export_utils import (
+    export_pph21_csv,
+    export_withholding_csv,
+    export_period_report_csv,
+)
 
 # ═══════════════════════════════════════════════════════════
 # THEME — Neutral (eye-friendly, matches web)
@@ -490,14 +494,38 @@ class CalculatorScreen(BaseScreen):
 # ═══════════════════════════════════════════════════════════
 # WITHHOLDING LOG
 # ═══════════════════════════════════════════════════════════
+def _android_export_dir():
+    try:
+        app = App.get_running_app()
+        if app and getattr(app, 'user_data_dir', None):
+            return os.path.join(app.user_data_dir, 'exports')
+    except Exception:
+        pass
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exports')
+
+
+def _show_export_result(title, msg, error=False):
+    popup = Popup(
+        title=title,
+        content=make_label(msg, 12, ERROR if error else TEXT, False, 'left' if not error else 'center', 140 if not error else 80),
+        size_hint=(0.92, 0.42 if not error else 0.32),
+    )
+    popup.open()
+
+
 class WithholdingScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__('withholding', 'Log PPh 23/26', **kwargs)
 
     def build_ui(self):
-        add_btn = make_button('+ Tambah Transaksi', height=44)
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        add_btn = make_button('+ Tambah', PRIMARY, WHITE, 40)
         add_btn.bind(on_release=lambda _b: self.show_add_popup())
-        self.body.add_widget(add_btn)
+        export_btn = make_button('Export CSV', SURFACE_MUTED, TEXT, 40)
+        export_btn.bind(on_release=lambda _b: self.export_csv())
+        actions.add_widget(add_btn)
+        actions.add_widget(export_btn)
+        self.body.add_widget(actions)
 
         try:
             rows, total = TaxDB().get_all_withholding(limit=50)
@@ -517,6 +545,20 @@ class WithholdingScreen(BaseScreen):
             card.add_widget(make_label(left, 12, TEXT, True, 'left'))
             card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right'))
             self.body.add_widget(card)
+
+    def export_csv(self):
+        try:
+            rows, _ = TaxDB().get_all_withholding(limit=10000)
+            if not rows:
+                raise ValueError('Belum ada data potongan untuk diekspor')
+            path, count, total = export_withholding_csv(rows, _android_export_dir())
+            msg = (
+                f'CSV tersimpan\n{count} baris · total PPh Rp {total:,.0f}\n\n'
+                f'{path}'
+            )
+            _show_export_result('Export PPh 23/26', msg)
+        except Exception as exc:
+            _show_export_result('Export gagal', str(exc), error=True)
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
@@ -599,38 +641,19 @@ class Pph21Screen(BaseScreen):
             card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right', 42))
             self.body.add_widget(card)
 
-    def _export_dir(self):
-        try:
-            app = App.get_running_app()
-            if app and getattr(app, 'user_data_dir', None):
-                return os.path.join(app.user_data_dir, 'exports')
-        except Exception:
-            pass
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exports')
-
     def export_csv(self):
         try:
             rows, _ = TaxDB().get_pph21_log(limit=10000)
             if not rows:
                 raise ValueError('Belum ada data PPh 21 untuk diekspor')
-            path, count, total = export_pph21_csv(rows, self._export_dir())
+            path, count, total = export_pph21_csv(rows, _android_export_dir())
             msg = (
                 f'CSV tersimpan\n{count} baris · total PPh Rp {total:,.0f}\n\n'
                 f'{path}'
             )
-            popup = Popup(
-                title='Export PPh 21',
-                content=make_label(msg, 12, TEXT, False, 'left', 140),
-                size_hint=(0.92, 0.42),
-            )
-            popup.open()
+            _show_export_result('Export PPh 21', msg)
         except Exception as exc:
-            err = Popup(
-                title='Export gagal',
-                content=make_label(str(exc), 12, ERROR, False, 'center', 80),
-                size_hint=(0.85, 0.32),
-            )
-            err.open()
+            _show_export_result('Export gagal', str(exc), error=True)
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
@@ -1140,6 +1163,10 @@ class ReportScreen(BaseScreen):
         nav.add_widget(next_btn)
         self.body.add_widget(nav)
 
+        export_btn = make_button('Export CSV', SURFACE_MUTED, TEXT, 40)
+        export_btn.bind(on_release=lambda _b: self.export_csv())
+        self.body.add_widget(export_btn)
+
         try:
             summary = TaxDB().get_summary_by_period(self.view_year, self.view_month)
         except Exception as exc:
@@ -1192,6 +1219,23 @@ class ReportScreen(BaseScreen):
                 12, ERROR, False, 'left', 20,
             ))
             self.body.add_widget(card)
+
+    def export_csv(self):
+        try:
+            summary = TaxDB().get_summary_by_period(self.view_year, self.view_month)
+            details = summary.get('details') or []
+            if not details and not float(summary.get('grand_total') or 0):
+                raise ValueError('Belum ada data periode ini untuk diekspor')
+            path, count, total = export_period_report_csv(
+                summary, self.view_year, self.view_month, _android_export_dir(),
+            )
+            msg = (
+                f'CSV tersimpan\n{count} baris rincian · total PPh Rp {total:,.0f}\n'
+                f'Periode {self.view_month:02d}/{self.view_year}\n\n{path}'
+            )
+            _show_export_result('Export Laporan', msg)
+        except Exception as exc:
+            _show_export_result('Export gagal', str(exc), error=True)
 
     def shift_period(self, delta):
         m = self.view_month + delta

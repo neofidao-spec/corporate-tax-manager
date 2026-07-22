@@ -475,55 +475,25 @@ def create_app(testing=False):
             flash(str(e), 'error')
             return redirect(url_for('period_report', year=year, month=month))
 
-        labels = {
-            'pph23': 'PPh 23', 'pph26': 'PPh 26',
-            'pph_final': 'PPh Final', 'pph21': 'PPh 21',
-        }
-        output = StringIO()
-        w = csv.writer(output)
-        w.writerow(['Tahun', 'Bulan', 'Kode Pajak', 'Label', 'Jenis Objek',
-                     'Jumlah', 'Total Bruto', 'Total PPh'])
-        for d in summary.get('details') or []:
-            code = d.get('tax_code') or ''
-            w.writerow([
-                year, month, code, labels.get(code, code),
-                d.get('obj_type') or '',
-                d.get('count') or 0,
-                d.get('total_amount') or 0,
-                d.get('total_tax') or 0,
-            ])
-        # Totals row
-        w.writerow([])
-        w.writerow(['', '', 'TOTAL', '', '',
-                    summary.get('transaction_count') or 0, '',
-                    summary.get('grand_total') or 0])
+        from data.export_utils import period_report_csv_rows, render_csv
         filename = f'laporan_periode_{year}_{month:02d}.csv'
         return Response(
-            output.getvalue(),
+            render_csv(period_report_csv_rows(summary, year, month)),
             mimetype='text/csv',
             headers={'Content-Disposition': f'attachment;filename={filename}'},
         )
 
     @app.route('/withholding/export')
     def export_withholding():
+        from data.export_utils import withholding_csv_rows, render_csv
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         tax_code = request.args.get('tax_code')
         records, _ = g.db.get_all_withholding(
             limit=10000, year=year, month=month, tax_code=tax_code,
         )
-        output = StringIO()
-        w = csv.writer(output)
-        w.writerow(['ID', 'Vendor', 'Jumlah Bruto', 'Jenis Objek', 'Jenis Pajak',
-                     'Tarif', 'PPh', 'Deskripsi', 'Tgl Input', 'Tahun', 'Bulan'])
-        for r in records:
-            w.writerow([
-                r['id'], r['vendor'], r['amount'], r['obj_type'], r['tax_code'],
-                r['tariff_label'], r['pph_amount'], r['description'],
-                r['created_at'], r['tax_year'], r['tax_month'],
-            ])
         return Response(
-            output.getvalue(),
+            render_csv(withholding_csv_rows(records)),
             mimetype='text/csv',
             headers={'Content-Disposition': 'attachment;filename=pph_export.csv'},
         )

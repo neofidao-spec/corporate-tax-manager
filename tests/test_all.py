@@ -760,6 +760,8 @@ class TestWebApp(unittest.TestCase):
     def test_export_utils_pph21_csv(self):
         from data.export_utils import (
             pph21_csv_rows, render_csv, export_pph21_csv, default_export_filename,
+            withholding_csv_rows, export_withholding_csv,
+            period_report_csv_rows, export_period_report_csv,
         )
         import tempfile
         import os
@@ -786,12 +788,44 @@ class TestWebApp(unittest.TestCase):
             self.assertEqual(count, 1)
             self.assertEqual(total, 250000.0)
             self.assertTrue(path.endswith('.csv'))
-        self.assertTrue(default_export_filename().startswith('pph21_export_'))
+        self.assertTrue(default_export_filename('pph21_export').startswith('pph21_export_'))
 
-        # Web export still works via shared helper
-        r = self.client.get('/pph21/export')
-        self.assertEqual(r.status_code, 200)
-        self.assertIn('text/csv', r.content_type)
+        wh = [{
+            'id': 9, 'vendor': 'PT ABC', 'amount': 1000000, 'obj_type': 'Jasa',
+            'tax_code': 'pph23', 'tariff_label': '2%', 'pph_amount': 20000,
+            'description': 'konsultan', 'created_at': '2026-07-22',
+            'tax_year': 2026, 'tax_month': 7,
+        }]
+        wh_rows = withholding_csv_rows(wh)
+        self.assertEqual(wh_rows[1][1], 'PT ABC')
+        with tempfile.TemporaryDirectory() as td:
+            path, count, total = export_withholding_csv(wh, td)
+            self.assertTrue(os.path.exists(path))
+            self.assertEqual(count, 1)
+            self.assertEqual(total, 20000.0)
+
+        summary = {
+            'details': [{
+                'tax_code': 'pph23', 'obj_type': 'Jasa', 'count': 2,
+                'total_amount': 2000000, 'total_tax': 40000,
+            }],
+            'transaction_count': 2,
+            'grand_total': 40000,
+        }
+        pr_rows = period_report_csv_rows(summary, 2026, 7)
+        self.assertIn('TOTAL', pr_rows[-1])
+        with tempfile.TemporaryDirectory() as td:
+            path, count, total = export_period_report_csv(summary, 2026, 7, td)
+            self.assertTrue(os.path.exists(path))
+            self.assertEqual(count, 1)
+            self.assertEqual(total, 40000.0)
+            self.assertIn('laporan_periode_2026_07.csv', path)
+
+        # Web export still works via shared helpers
+        for path in ('/pph21/export', '/withholding/export', '/reports/period/export?year=2026&month=7'):
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertIn('text/csv', r.content_type, path)
 
 
 if __name__ == '__main__':
