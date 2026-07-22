@@ -69,10 +69,12 @@
                         <td>{% if d.tax_year %}{{ d.tax_year }}-{{ "%02d"|format(d.tax_month or 0) }}{% else %}-{% endif %}</td>
                         <td><small>{{ d.created_at[:10] }}</small></td>
                         <td>
-                            <a href="/documents/delete/{{ d.id }}" class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Hapus dokumen \"{{ d.title }}\"?')">
-                                <i class="bi bi-trash"></i>
-                            </a>
+                            <form method="POST" action="/documents/delete/{{ d.id }}" style="display:inline"
+                                  onsubmit="return confirm('Hapus dokumen \'{{ d.title }}\'?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

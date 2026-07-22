@@ -85,6 +85,35 @@ class TestTaxCalculator(unittest.TestCase):
         r = self.calc.pph21_non_pegawai(20_000_000, 'TK0')
         self.assertResultValues(r, gross_income=20_000_000)
         self.assertIn('metode', r)
+        # 50% norma: neto year = 20jt * 0.5 * 12 = 120jt; PKP = 120jt - 54jt = 66jt
+        self.assertResultValues(r, net_yearly=120_000_000, pkp=66_000_000)
+
+    def test_pph21_invalid_status(self):
+        with self.assertRaises(ValueError):
+            self.calc.pph21(10_000_000, 'INVALID')
+
+    def test_pph23_case_insensitive_type(self):
+        r = self.calc.pph23(50_000_000, 'dividen')
+        self.assertResultValues(r, pph=7_500_000, tarif='15%', jenis='Dividen')
+
+    def test_db_rejects_negative_withholding(self):
+        import tempfile, os
+        path = tempfile.mktemp(suffix='.db')
+        try:
+            db = TaxDB(path)
+            db.init_tables()
+            with self.assertRaises(ValueError):
+                db.add_withholding('V', -1000, 'Jasa', 'pph23', '2%')
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_delete_withholding_requires_post(self):
+        from web_app import create_app
+        app = create_app(testing=True)
+        client = app.test_client()
+        r = client.get('/withholding/delete/1')
+        self.assertEqual(r.status_code, 405)
 
     # ─── PPh 23 Tests ───
 

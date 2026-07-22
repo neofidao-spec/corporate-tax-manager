@@ -160,19 +160,55 @@ class TaxDB:
     def add_withholding(self, vendor: str, amount: float, obj_type: str,
                         tax_code: str = 'pph23', tariff_label: str = '2%',
                         description: str = '') -> int:
+        vendor = (vendor or '').strip()
+        if not vendor:
+            raise ValueError('Nama vendor harus diisi')
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            raise ValueError('Jumlah bruto harus berupa angka')
+        if amount < 0:
+            raise ValueError('Jumlah bruto tidak boleh negatif')
+
         conn = self._conn()
         cursor = conn.cursor()
         now = datetime.now()
 
-        tariff_map = {'2%': 0.02, '15%': 0.15, '20%': 0.20, '10%': 0.10, '0.5%': 0.005}
-        tariff = tariff_map.get(tariff_label.strip(), 0.02)
-        pph_amount = amount * tariff
+        tax_code = (tax_code or 'pph23').strip().lower()
+        tariff_label = (tariff_label or '2%').strip()
+        obj_type = (obj_type or 'Jasa').strip() or 'Jasa'
+
+        # Prefer calculator rates when available so DB and UI stay consistent
+        try:
+            from data.tax_calculator import TaxCalculator
+            calc = TaxCalculator()
+            if tax_code == 'pph26':
+                calc_res = calc.pph26(amount, obj_type)
+            elif tax_code in ('pph_final', 'pph4_2', 'final'):
+                # Final uses explicit tariff label
+                calc_res = None
+            else:
+                calc_res = calc.pph23(amount, obj_type)
+        except Exception:
+            calc_res = None
+
+        if calc_res is not None:
+            pph_amount = float(calc_res['pph'])
+            tariff_label = str(calc_res.get('tarif', tariff_label))
+            obj_type = str(calc_res.get('jenis', obj_type))
+        else:
+            tariff_map = {
+                '2%': 0.02, '15%': 0.15, '20%': 0.20, '10%': 0.10,
+                '0.5%': 0.005, '2.5%': 0.025, '7.5%': 0.075, '4%': 0.04, '3%': 0.03,
+            }
+            tariff = tariff_map.get(tariff_label, 0.02)
+            pph_amount = amount * tariff
 
         cursor.execute("""
             INSERT INTO withholding (vendor, amount, obj_type, tax_code, tariff_label, pph_amount, description,
                                      created_at, tax_year, tax_month)
             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?, ?)
-        """, (vendor, amount, obj_type, tax_code, tariff_label, pph_amount, description,
+        """, (vendor, amount, obj_type, tax_code, tariff_label, pph_amount, description or '',
               now.year, now.month))
         conn.commit()
         rid = cursor.lastrowid
@@ -276,6 +312,16 @@ class TaxDB:
     def add_pph21(self, employee_name: str, gross_salary: float,
                   dependents: int, ptkp_status: str,
                   pph21_amount: float, year: int, month: int) -> int:
+        employee_name = (employee_name or '').strip()
+        if not employee_name:
+            raise ValueError('Nama pegawai harus diisi')
+        try:
+            gross_salary = float(gross_salary)
+            pph21_amount = float(pph21_amount)
+        except (TypeError, ValueError):
+            raise ValueError('Nilai gaji/PPh harus berupa angka')
+        if gross_salary < 0 or pph21_amount < 0:
+            raise ValueError('Nilai gaji/PPh tidak boleh negatif')
         conn = self._conn()
         cursor = conn.cursor()
         cursor.execute("""

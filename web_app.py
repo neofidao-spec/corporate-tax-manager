@@ -28,7 +28,7 @@ calc = TaxCalculator()
 # ─── App Factory ───
 def create_app(testing=False):
     app = Flask(__name__)
-    app.secret_key = os.environ.get('SECRET_KEY', 'corporate-tax-mgr-2026')
+    app.secret_key = os.environ.get('SECRET_KEY') or ('test-secret' if testing else os.urandom(24).hex())
     app.config['DATABASE'] = os.path.join(
         os.path.dirname(__file__), 'tax_data.db')
 
@@ -169,19 +169,19 @@ def create_app(testing=False):
                 flash('Nama vendor harus diisi', 'error')
                 return redirect(url_for('withholding'))
             amount = float(request.form.get('amount', 0))
+            if amount < 0:
+                flash('Jumlah bruto tidak boleh negatif', 'error')
+                return redirect(url_for('withholding'))
             obj_type = request.form.get('obj_type', 'Jasa')
             tax_code = request.form.get('tax_code', 'pph23')
             tariff_label = request.form.get('tariff', '2%')
             description = request.form.get('description', '')
 
             rid = g.db.add_withholding(vendor, amount, obj_type, tax_code, tariff_label, description)
-            # Get the result from calculator for display
-            if tax_code == 'pph26':
-                res = calc.pph26(amount, obj_type)
-            else:
-                res = calc.pph23(amount, obj_type)
-
-            flash(f'Data tersimpan: {vendor} — Rp {res["pph"]:,.0f}', 'success')
+            # Read back stored amount for flash (DB is source of truth)
+            records, _ = g.db.get_all_withholding(limit=1)
+            pph_val = records[0]['pph_amount'] if records else 0
+            flash(f'Data tersimpan: {vendor} — Rp {float(pph_val):,.0f}', 'success')
         except ValueError as e:
             flash(str(e), 'error')
         except Exception as e:
@@ -189,7 +189,7 @@ def create_app(testing=False):
 
         return redirect(url_for('withholding'))
 
-    @app.route('/withholding/delete/<int:rid>')
+    @app.route('/withholding/delete/<int:rid>', methods=['POST'])
     def delete_withholding(rid):
         g.db.delete_withholding(rid)
         flash('Data dihapus', 'success')
@@ -253,7 +253,7 @@ def create_app(testing=False):
             flash(f'Gagal: {str(e)}', 'error')
         return redirect(url_for('documents'))
 
-    @app.route('/documents/delete/<int:did>')
+    @app.route('/documents/delete/<int:did>', methods=['POST'])
     def delete_document(did):
         g.db.delete_document(did)
         flash('Dokumen dihapus', 'success')

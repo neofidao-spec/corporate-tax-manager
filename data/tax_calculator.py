@@ -85,6 +85,16 @@ class TaxCalculator:
         'Hadiah': 0.20,
     }
 
+    @staticmethod
+    def _normalize_obj_type(obj_type: str) -> str:
+        """Normalize object type labels to TARIF_* map keys."""
+        raw = str(obj_type or 'Jasa').strip()
+        if not raw:
+            return 'Jasa'
+        # Prefer exact case-insensitive match against known keys
+        lookup = {k.lower(): k for k in TaxCalculator.TARIF_PPH23.keys()}
+        return lookup.get(raw.lower(), raw.title())
+
     def _pph21_progresif(self, pkp: float) -> float:
         """Hitung PPh dengan tarif progresif Pasal 17."""
         pph = 0.0
@@ -105,8 +115,10 @@ class TaxCalculator:
         Returns dict berisi seluruh rincian perhitungan.
         """
         gaji = _validate_positive(gross_monthly, 'Gaji bruto')
-        status = status.upper()
-        ptkp = self.PTKP.get(status, 54_000_000)
+        status = str(status or 'TK0').upper().strip()
+        if status not in self.PTKP:
+            raise ValueError(f'Status PTKP tidak valid: {status}. Gunakan: {", ".join(self.PTKP.keys())}')
+        ptkp = self.PTKP[status]
 
         # Biaya jabatan setahun
         biaya_jabatan = min(gaji * self.BIAYA_JABATAN_PERSEN * 12, self.BIAYA_JABATAN_MAX_THN)
@@ -138,12 +150,15 @@ class TaxCalculator:
     def pph21_non_pegawai(self, gross_income: float, status: str = 'TK0') -> Dict:
         """PPh 21 untuk bukan pegawai (tenaga ahli, komisi, dll)."""
         penghasilan = _validate_positive(gross_income, 'Penghasilan bruto')
-        status = status.upper()
-        ptkp = self.PTKP.get(status, 54_000_000)
+        status = str(status or 'TK0').upper().strip()
+        if status not in self.PTKP:
+            raise ValueError(f'Status PTKP tidak valid: {status}. Gunakan: {", ".join(self.PTKP.keys())}')
+        ptkp = self.PTKP[status]
 
-        # 50% penghasilan bruto sebagai penghasilan neto
+        # Norma 50% penghasilan bruto sebagai penghasilan neto (bukan pegawai).
+        # Tidak ada biaya jabatan tambahan — norma sudah merepresentasikan neto.
         neto = penghasilan * 0.50
-        neto_year = neto * 12 - min(neto * 12 * self.BIAYA_JABATAN_PERSEN, self.BIAYA_JABATAN_MAX_THN)
+        neto_year = neto * 12
         pkp = max(0, neto_year - ptkp)
         pph_year = self._pph21_progresif(pkp)
         pph_month = pph_year / 12
@@ -152,8 +167,10 @@ class TaxCalculator:
             'pph_monthly': round(pph_month, 2),
             'pph_yearly': round(pph_year, 2),
             'gross_income': round(penghasilan, 2),
+            'net_yearly': round(neto_year, 2),
             'pkp': round(pkp, 2),
             'ptkp': round(ptkp, 2),
+            'status': status,
             'metode': '50% Norma Penghitungan (Bukan Pegawai)',
         }
 
@@ -161,7 +178,7 @@ class TaxCalculator:
     def pph23(self, amount: float, obj_type: str = 'Jasa') -> Dict:
         """Hitung PPh 23 atas penghasilan WP Dalam Negeri."""
         jumlah = _validate_positive(amount, 'Jumlah bruto')
-        obj_type = obj_type.title()
+        obj_type = self._normalize_obj_type(obj_type)
         tariff = self.TARIF_PPH23.get(obj_type, 0.02)
         pph = jumlah * tariff
         diterima = jumlah - pph
@@ -169,7 +186,7 @@ class TaxCalculator:
         return {
             'pph': round(pph, 2),
             'diterima': round(diterima, 2),
-            'tarif': f'{tariff*100:.0f}%',
+            'tarif': f'{tariff*100:.0f}%' if tariff * 100 == int(tariff * 100) else f'{tariff*100:.1f}%',
             'jenis': obj_type,
             'dasar_pengenaan': round(jumlah, 2),
             'jenis_pajak': 'PPh 23',
@@ -180,7 +197,7 @@ class TaxCalculator:
               tax_treaty: bool = False) -> Dict:
         """Hitung PPh 26 untuk Wajib Pajak Luar Negeri."""
         jumlah = _validate_positive(amount, 'Jumlah bruto')
-        obj_type = obj_type.title()
+        obj_type = self._normalize_obj_type(obj_type)
 
         # Jika ada Tax Treaty, tarif mengikuti P3B (default 20% - bisa override user)
         base_tariff = self.TARIF_PPH26.get(obj_type, 0.20)

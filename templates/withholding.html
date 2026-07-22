@@ -70,10 +70,12 @@
                         <td><small class="text-muted">{{ r.description[:40] if r.description else '-' }}</small></td>
                         <td><small>{{ r.created_at[:10] }}</small></td>
                         <td>
-                            <a href="/withholding/delete/{{ r.id }}" class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Hapus data ini?')">
-                                <i class="bi bi-trash"></i>
-                            </a>
+                            <form method="POST" action="/withholding/delete/{{ r.id }}" style="display:inline"
+                                  onsubmit="return confirm('Hapus data ini?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
