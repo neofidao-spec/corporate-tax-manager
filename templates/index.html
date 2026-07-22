@@ -6,7 +6,7 @@
         <h2>Beranda</h2>
         <div class="subtitle">Ringkasan pajak perusahaan — periode {{ month_labels[selected_month] }} {{ selected_year }}</div>
     </div>
-    <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+    <form method="GET" class="period-toolbar d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-outline-copper btn-sm" href="/?year={{ prev_y }}&month={{ prev_m }}" title="Periode sebelumnya">
             <i class="bi bi-chevron-left"></i>
         </a>
@@ -23,18 +23,15 @@
     </form>
 </div>
 
-<!-- Stat Cards -->
+<!-- Stat Cards: decision-first KPI hierarchy -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3 col-6">
-        <div class="card stat-card h-100">
+    <div class="col-md-4 col-12">
+        <div class="card stat-card kpi-hero h-100">
             <i class="bi bi-cash-stack icon"></i>
             <div class="label">PPh bulan ini</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_due_this_month) }}</div>
             {% if comparison %}
-            <div class="trend mt-1" style="font-size:0.78rem;color:
-                {% if comparison.direction == 'up' %}var(--danger)
-                {% elif comparison.direction == 'down' %}var(--success)
-                {% else %}var(--text-muted){% endif %};">
+            <div class="trend trend-{{ comparison.direction }}">
                 {% if comparison.direction == 'up' %}
                 <i class="bi bi-arrow-up-right"></i>
                 {% elif comparison.direction == 'down' %}
@@ -49,21 +46,21 @@
             {% endif %}
         </div>
     </div>
-    <div class="col-md-3 col-6">
+    <div class="col-md-4 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-graph-up-arrow icon"></i>
             <div class="label">Total PPh {{ dash.year }}</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_year) }}</div>
         </div>
     </div>
-    <div class="col-md-3 col-6">
+    <div class="col-md-2 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-receipt icon"></i>
             <div class="label">Jenis transaksi</div>
             <div class="value">{{ dash.by_type|length }}</div>
         </div>
     </div>
-    <div class="col-md-3 col-6">
+    <div class="col-md-2 col-6">
         <div class="card stat-card h-100">
             <i class="bi bi-file-earmark-text icon"></i>
             <div class="label">Dokumen tercatat</div>
@@ -83,7 +80,7 @@
                 {% if deadlines %}
                 <div class="list-group list-group-flush">
                     {% for d in deadlines %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div class="list-group-item deadline-item d-flex justify-content-between align-items-center py-3">
                         <div class="me-3">
                             <div class="fw-semibold">{{ d.title }}</div>
                             <small class="text-muted">{{ d.description }}</small>
@@ -153,7 +150,7 @@
                                 <td><span class="badge bg-secondary">{{ months[r.tax_month] }}</span></td>
                                 <td>{{ labels.get(r.tax_code, r.tax_code) }}</td>
                                 <td>{{ r.count }}</td>
-                                <td class="text-end fw-semibold">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
+                                <td class="table-money">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -172,7 +169,9 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="row mt-4 g-3">
+<div class="mt-4">
+    <div class="section-label">Aksi cepat</div>
+    <div class="row g-3 action-grid">
     <div class="col-md-2 col-6">
         <a href="/calculator" class="btn btn-copper btn-action w-100">
             <i class="bi bi-calculator"></i>
@@ -208,6 +207,7 @@
             <i class="bi bi-calendar3"></i>
             <span class="small">Kalender</span>
         </a>
+    </div>
     </div>
 </div>
 {% endblock %}

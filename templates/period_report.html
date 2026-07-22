@@ -7,7 +7,7 @@
         <div class="subtitle">Ringkasan potongan pajak — {{ month_labels[selected_month] }} {{ selected_year }}</div>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
-        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+        <form method="GET" class="period-toolbar d-flex align-items-center gap-2 flex-wrap">
             <a class="btn btn-outline-copper btn-sm" href="/reports/period?year={{ prev_y }}&month={{ prev_m }}">
                 <i class="bi bi-chevron-left"></i>
             </a>
@@ -35,8 +35,8 @@
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-3 col-6">
-        <div class="card stat-card h-100">
+    <div class="col-md-4 col-12">
+        <div class="card stat-card kpi-hero h-100">
             <div class="label">Total PPh periode</div>
             <div class="value">Rp {{ "{:,.0f}".format(summary.grand_total) }}</div>
         </div>
@@ -53,7 +53,7 @@
             <div class="value">Rp {{ "{:,.0f}".format(summary.pph21_total or 0) }}</div>
         </div>
     </div>
-    <div class="col-md-3 col-6">
+    <div class="col-md-2 col-6">
         <div class="card stat-card h-100">
             <div class="label">Jumlah grup</div>
             <div class="value">{{ summary.count }}</div>
@@ -86,8 +86,8 @@
                         <td><span class="badge bg-secondary">{{ labels.get(d.tax_code, d.tax_code) }}</span></td>
                         <td>{{ d.obj_type }}</td>
                         <td>{{ d.count }}</td>
-                        <td>Rp {{ "{:,.0f}".format(d.total_amount or 0) }}</td>
-                        <td class="fw-bold">Rp {{ "{:,.0f}".format(d.total_tax or 0) }}</td>
+                        <td class="table-money">Rp {{ "{:,.0f}".format(d.total_amount or 0) }}</td>
+                        <td class="table-money">Rp {{ "{:,.0f}".format(d.total_tax or 0) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

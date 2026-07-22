@@ -82,9 +82,9 @@
                     <tr>
                         <td>{{ r.id }}</td>
                         <td class="fw-semibold">{{ r.employee_name }}</td>
-                        <td>Rp {{ "{:,.0f}".format(r.gross_salary) }}</td>
+                        <td class="table-money">Rp {{ "{:,.0f}".format(r.gross_salary) }}</td>
                         <td><span class="badge bg-secondary">{{ r.ptkp_status }}</span></td>
-                        <td class="fw-bold">Rp {{ "{:,.0f}".format(r.pph21_amount) }}</td>
+                        <td class="table-money">Rp {{ "{:,.0f}".format(r.pph21_amount) }}</td>
                         <td>{{ r.period_year }}-{{ "%02d"|format(r.period_month) }}</td>
                         <td><small>{{ r.created_at[:10] if r.created_at else '-' }}</small></td>
                         <td>

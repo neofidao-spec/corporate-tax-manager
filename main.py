@@ -46,6 +46,7 @@ ERROR = hex2rgb('#B42318')
 GREEN = hex2rgb('#2F7D57')
 WARNING = hex2rgb('#B7791F')
 BORDER = hex2rgb('#E2E8F0')
+SURFACE_HOVER = hex2rgb('#FAFBFC')
 
 # Backward-compatible aliases used in screens
 NAVY = PRIMARY
@@ -89,7 +90,7 @@ def paint_card(widget):
     widget.canvas.before.clear()
     with widget.canvas.before:
         Color(*SURFACE)
-        widget._card_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(10)])
+        widget._card_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(12)])
     widget.bind(
         pos=lambda w, _v: setattr(w._card_bg, 'pos', w.pos),
         size=lambda w, _v: setattr(w._card_bg, 'size', w.size),
@@ -107,6 +108,10 @@ def paint_bar(widget, color):
     )
 
 
+def section_label(text):
+    return make_label(text.upper(), 11, SUBTLE, True, 'left', 22)
+
+
 # ═══════════════════════════════════════════════════════════
 # BASE SCREEN
 # ═══════════════════════════════════════════════════════════
@@ -115,7 +120,7 @@ class BaseScreen(Screen):
         super().__init__(name=name, **kwargs)
         root = BoxLayout(orientation='vertical')
 
-        header = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(12), dp(4)])
+        header = BoxLayout(size_hint_y=None, height=dp(50), padding=[dp(14), dp(6)])
         paint_bar(header, SURFACE)
         header.add_widget(make_label(title_text, 16, TEXT, True, 'left'))
         root.add_widget(header)
@@ -123,8 +128,8 @@ class BaseScreen(Screen):
         self.scroll = ScrollView(do_scroll_x=False)
         self.body = BoxLayout(
             orientation='vertical',
-            spacing=dp(6),
-            padding=[dp(12), dp(8), dp(12), dp(14)],
+            spacing=dp(8),
+            padding=[dp(14), dp(10), dp(14), dp(16)],
             size_hint_y=None,
         )
         self.body.bind(minimum_height=self.body.setter('height'))
@@ -152,7 +157,8 @@ class DashboardScreen(BaseScreen):
 
     def build_ui(self):
         now = date.today()
-        self.body.add_widget(make_label(f'Ringkasan {now.month:02d}/{now.year}', 16, TEXT, True, 'left', 28))
+        self.body.add_widget(section_label('Ringkasan periode'))
+        self.body.add_widget(make_label(f'{now.month:02d}/{now.year}', 18, TEXT, True, 'left', 30))
 
         total_month = total_year = doc_count = pph21_month = 0.0
         try:
@@ -164,29 +170,37 @@ class DashboardScreen(BaseScreen):
         except Exception:
             pass
 
-        grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(140))
+        hero = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(2), size_hint_y=None, height=dp(78))
+        paint_card(hero)
+        hero.add_widget(make_label('TOTAL PPH BULAN INI', 11, PRIMARY, True, 'left', 18))
+        hero.add_widget(make_label(f'Rp {total_month:,.0f}', 18, TEXT, True, 'left', 30))
+        self.body.add_widget(hero)
+
+        grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(148))
         for title, value in [
-            ('Total PPh Bulan', f'Rp {total_month:,.0f}'),
             ('Total Tahun', f'Rp {total_year:,.0f}'),
             ('PPh 21 Bulan', f'Rp {pph21_month:,.0f}'),
             ('Dokumen', str(doc_count)),
+            ('Status', 'Siap lapor'),
         ]:
-            card = BoxLayout(orientation='vertical', padding=[dp(10), dp(8)], spacing=dp(2), size_hint_y=None, height=dp(64))
+            card = BoxLayout(orientation='vertical', padding=[dp(10), dp(8)], spacing=dp(2), size_hint_y=None, height=dp(68))
             paint_card(card)
-            card.add_widget(make_label(title, 11, SUBTLE, False, 'center', 18))
-            card.add_widget(make_label(value, 15, TEXT, True, 'center', 24))
+            card.add_widget(make_label(title, 11, SUBTLE, False, 'left', 18))
+            card.add_widget(make_label(value, 14, TEXT, True, 'left', 24))
             grid.add_widget(card)
         self.body.add_widget(grid)
 
-        report_btn = make_button('Laporan Periode', PRIMARY, WHITE, 40)
+        self.body.add_widget(section_label('Aksi cepat'))
+        actions = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
+        report_btn = make_button('Laporan', PRIMARY, WHITE, 42)
         report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
-        self.body.add_widget(report_btn)
-
-        docs_btn = make_button('Dokumen Pajak', SURFACE_MUTED, TEXT, 40)
+        docs_btn = make_button('Dokumen', SURFACE_MUTED, TEXT, 42)
         docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
-        self.body.add_widget(docs_btn)
+        actions.add_widget(report_btn)
+        actions.add_widget(docs_btn)
+        self.body.add_widget(actions)
 
-        self.body.add_widget(make_label('Deadline Mendatang', 16, TEXT, True, 'left', 28))
+        self.body.add_widget(section_label('Deadline mendatang'))
         try:
             deadlines = TaxDB().get_upcoming_deadlines(days_ahead=45)
         except Exception:
@@ -196,7 +210,7 @@ class DashboardScreen(BaseScreen):
         for item in deadlines[:6]:
             status = item.get('status', 'OK')
             color = ERROR if status == 'LEWAT' else (WARNING if status == 'SEGERA' else GREEN)
-            row = BoxLayout(size_hint_y=None, height=dp(44), padding=[dp(10), dp(6)], spacing=dp(8))
+            row = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(12), dp(8)], spacing=dp(8))
             paint_card(row)
             row.add_widget(make_label(str(item.get('title') or '-'), 13, TEXT, True, 'left'))
             row.add_widget(Widget())
@@ -1017,18 +1031,19 @@ class ReportScreen(BaseScreen):
         self.view_month = date.today().month
 
     def build_ui(self):
-        nav = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(6))
-        prev_btn = make_button('<', SURFACE_MUTED, TEXT, 36)
+        self.body.add_widget(section_label('Periode laporan'))
+        nav = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(6))
+        prev_btn = make_button('<', SURFACE_MUTED, TEXT, 38)
         prev_btn.size_hint_x = None
         prev_btn.width = dp(44)
         prev_btn.bind(on_release=lambda _b: self.shift_period(-1))
-        next_btn = make_button('>', SURFACE_MUTED, TEXT, 36)
+        next_btn = make_button('>', SURFACE_MUTED, TEXT, 38)
         next_btn.size_hint_x = None
         next_btn.width = dp(44)
         next_btn.bind(on_release=lambda _b: self.shift_period(1))
         nav.add_widget(prev_btn)
         nav.add_widget(make_label(
-            f'{self.view_month:02d}/{self.view_year}', 15, TEXT, True, 'center', 36,
+            f'{self.view_month:02d}/{self.view_year}', 16, TEXT, True, 'center', 38,
         ))
         nav.add_widget(next_btn)
         self.body.add_widget(nav)
@@ -1039,22 +1054,27 @@ class ReportScreen(BaseScreen):
             self.body.add_widget(make_label(f'Error: {exc}', 12, ERROR, False, 'left', 50))
             return
 
+        hero = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(2), size_hint_y=None, height=dp(74))
+        paint_card(hero)
+        hero.add_widget(make_label('TOTAL PPH', 11, PRIMARY, True, 'left', 18))
+        hero.add_widget(make_label(f"Rp {float(summary.get('grand_total') or 0):,.0f}", 18, TEXT, True, 'left', 28))
+        self.body.add_widget(hero)
+
         stats = BoxLayout(orientation='vertical', spacing=dp(6), size_hint_y=None)
         stats.bind(minimum_height=stats.setter('height'))
         for title, value in [
-            ('Total PPh', f"Rp {float(summary.get('grand_total') or 0):,.0f}"),
             ('PPh 23/26/Final', f"Rp {float(summary.get('withholding_total') or 0):,.0f}"),
             ('PPh 21', f"Rp {float(summary.get('pph21_total') or 0):,.0f}"),
             ('Transaksi', str(summary.get('transaction_count') or 0)),
         ]:
-            row = BoxLayout(size_hint_y=None, height=dp(42), padding=[dp(10), dp(6)])
+            row = BoxLayout(size_hint_y=None, height=dp(44), padding=[dp(12), dp(8)])
             paint_card(row)
             row.add_widget(make_label(title, 12, SUBTLE, False, 'left', 30))
             row.add_widget(make_label(value, 13, TEXT, True, 'right', 30))
             stats.add_widget(row)
         self.body.add_widget(stats)
 
-        self.body.add_widget(make_label('Rincian', 14, TEXT, True, 'left', 26))
+        self.body.add_widget(section_label('Rincian'))
         details = summary.get('details') or []
         if not details:
             self.body.add_widget(make_label('Belum ada data periode ini', 12, SUBTLE, False, 'left', 30))
@@ -1067,8 +1087,8 @@ class ReportScreen(BaseScreen):
         for d in details:
             code = labels.get(d.get('tax_code'), d.get('tax_code') or '-')
             card = BoxLayout(
-                orientation='vertical', size_hint_y=None, height=dp(62),
-                padding=[dp(10), dp(6)], spacing=dp(2),
+                orientation='vertical', size_hint_y=None, height=dp(64),
+                padding=[dp(12), dp(8)], spacing=dp(2),
             )
             paint_card(card)
             card.add_widget(make_label(
