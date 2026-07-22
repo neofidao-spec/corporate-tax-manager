@@ -219,8 +219,11 @@ class DashboardScreen(BaseScreen):
         report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
         docs_btn = make_button('Dokumen', SURFACE_MUTED, TEXT, 42)
         docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
+        dens_btn = make_button('Ringkas', SURFACE_MUTED, TEXT, 42)
+        dens_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_density())
         actions.add_widget(report_btn)
         actions.add_widget(docs_btn)
+        actions.add_widget(dens_btn)
         self.body.add_widget(actions)
 
         self.body.add_widget(section_label('Deadline mendatang'))
@@ -1153,6 +1156,7 @@ class ErrorScreen(Screen):
 class RootLayout(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
+        self.compact = False
         self.sm = ScreenManager(transition=NoTransition())
         self.sm.add_widget(DashboardScreen())
         self.sm.add_widget(CalculatorScreen())
@@ -1191,6 +1195,21 @@ class RootLayout(BoxLayout):
             selected = name == screen_name
             button.background_color = PRIMARY if selected else SURFACE_MUTED
             button.color = WHITE if selected else TEXT
+
+    def toggle_density(self):
+        """Compact mode: slightly tighter body spacing on current screen."""
+        self.compact = not self.compact
+        screen = self.sm.current_screen
+        if not hasattr(screen, 'body'):
+            return
+        if self.compact:
+            screen.body.spacing = dp(5)
+            screen.body.padding = [dp(10), dp(6), dp(10), dp(10)]
+        else:
+            screen.body.spacing = dp(8)
+            screen.body.padding = [dp(14), dp(10), dp(14), dp(16)]
+        if hasattr(screen, 'on_enter'):
+            screen.on_enter()
 
 
 # ═══════════════════════════════════════════════════════════

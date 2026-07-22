@@ -699,6 +699,16 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'Reminder deadline', dash.data)
         self.assertIn(b'Deadline Urgent UI', dash.data)
 
+    def test_density_toggle_and_skeleton_markup(self):
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'densityToggle', r.data)
+        self.assertIn(b'pageSkeleton', r.data)
+        self.assertIn(b'density-compact', r.data)
+        self.assertIn(b'is-loading', r.data)
+        self.assertIn(b'ctm_density', r.data)
+        self.assertIn(b'app-content-ready', r.data)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
