@@ -182,6 +182,10 @@ class DashboardScreen(BaseScreen):
         report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
         self.body.add_widget(report_btn)
 
+        docs_btn = make_button('Dokumen Pajak', SURFACE_MUTED, TEXT, 40)
+        docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
+        self.body.add_widget(docs_btn)
+
         self.body.add_widget(make_label('Deadline Mendatang', 16, TEXT, True, 'left', 28))
         try:
             deadlines = TaxDB().get_upcoming_deadlines(days_ahead=45)
@@ -442,13 +446,13 @@ class WithholdingScreen(BaseScreen):
             card = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(10), dp(6)], spacing=dp(8))
             paint_card(card)
             left = f"{row.get('vendor', '-')} ({row.get('obj_type', '-')})"
-            card.add_widget(make_label(left, 12, NAVY, True, 'left'))
+            card.add_widget(make_label(left, 12, TEXT, True, 'left'))
             card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, ERROR, True, 'right'))
             self.body.add_widget(card)
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
-        content.add_widget(make_label('Tambah Potongan PPh', 15, NAVY, True, 'left', 28))
+        content.add_widget(make_label('Tambah Potongan PPh', 15, TEXT, True, 'left', 28))
 
         vendor = TextInput(hint_text='Nama Vendor', multiline=False, size_hint_y=None, height=dp(38))
         amount = TextInput(hint_text='Jumlah Bruto (Rp)', multiline=False, input_filter='float', size_hint_y=None, height=dp(38))

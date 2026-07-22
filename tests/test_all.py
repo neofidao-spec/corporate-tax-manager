@@ -662,6 +662,14 @@ class TestWebApp(unittest.TestCase):
         self.assertIn('Pph', text)
         self.assertIn('Rp', text)
 
+    def test_dashboard_quick_actions(self):
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'/pph21', r.data)
+        self.assertIn(b'/reports/period', r.data)
+        self.assertIn(b'/documents', r.data)
+        self.assertIn(b'/calendar', r.data)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
