@@ -14,7 +14,13 @@
 <!-- Filter -->
 <div class="card mb-3 filter-form">
     <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-4 col-12">
+            <label class="form-label">Cari</label>
+            <input type="text" name="q" class="form-control form-control-sm"
+                   placeholder="Judul, kategori, atau catatan" value="{{ q }}">
+        </div>
         <div class="col-auto">
+            <label class="form-label">Kategori</label>
             <select name="category" class="form-select form-select-sm">
                 <option value="">Semua kategori</option>
                 <option value="Faktur Pajak" {% if category == 'Faktur Pajak' %}selected{% endif %}>Faktur Pajak</option>
@@ -25,11 +31,13 @@
             </select>
         </div>
         <div class="col-auto">
+            <label class="form-label">Status</label>
             <select name="status" class="form-select form-select-sm">
                 <option value="">Semua status</option>
                 <option value="Lengkap" {% if status_filter == 'Lengkap' %}selected{% endif %}>Lengkap</option>
                 <option value="Kurang" {% if status_filter == 'Kurang' %}selected{% endif %}>Kurang</option>
                 <option value="Arsip" {% if status_filter == 'Arsip' %}selected{% endif %}>Arsip</option>
+                <option value="Dalam Proses" {% if status_filter == 'Dalam Proses' %}selected{% endif %}>Dalam Proses</option>
             </select>
         </div>
         <div class="col-auto">
@@ -66,11 +74,18 @@
             <div class="doc-meta">{{ d.notes[:120] }}{% if d.notes|length > 120 %}…{% endif %}</div>
             {% endif %}
             <div class="doc-actions">
-                <small class="text-muted">#{{ d.id }}</small>
+                <form method="POST" action="/documents/{{ d.id }}/status?page={{ page }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+                      class="d-flex align-items-center gap-1">
+                    <select name="status" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                        {% for s in ['Lengkap', 'Kurang', 'Arsip', 'Dalam Proses'] %}
+                        <option value="{{ s }}" {% if d.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
                 <form method="POST" action="/documents/delete/{{ d.id }}"
                       onsubmit="return confirm('Hapus dokumen \'{{ d.title }}\'?')">
                     <button type="submit" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash"></i> Hapus
+                        <i class="bi bi-trash"></i>
                     </button>
                 </form>
             </div>
@@ -83,7 +98,7 @@
             <ul class="pagination pagination-sm mb-0">
                 {% for p in range(1, total_pages + 1) %}
                 <li class="page-item {{ 'active' if p == page }}">
-                    <a class="page-link" href="?page={{ p }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ p }}</a>
+                    <a class="page-link" href="?page={{ p }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ p }}</a>
                 </li>
                 {% endfor %}
             </ul>

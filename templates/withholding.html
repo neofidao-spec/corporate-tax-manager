@@ -6,7 +6,11 @@
         <h2>Log PPh 23/26</h2>
         <div class="subtitle">Catat dan kelola transaksi potongan PPh &mdash; {{ total }} data</div>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/withholding/print{% if year or month or tax_code %}?{% if year %}year={{ year }}&{% endif %}{% if month %}month={{ month }}&{% endif %}{% if tax_code %}tax_code={{ tax_code }}{% endif %}{% endif %}"
+           class="btn btn-outline-copper" target="_blank">
+            <i class="bi bi-printer"></i> Preview cetak
+        </a>
         <a href="/withholding/export" class="btn btn-outline-copper"><i class="bi bi-download"></i> Export CSV</a>
         <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
             <i class="bi bi-plus-lg"></i> Tambah

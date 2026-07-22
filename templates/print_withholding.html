@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Laporan PPh</title>
+    <style>
+        :root {
+            --text: #1F2937;
+            --muted: #6B7280;
+            --border: #E2E8F0;
+            --bg: #F4F6F8;
+            --primary: #3B4F6A;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.45;
+        }
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            padding: 0.75rem 1rem;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+        }
+        .toolbar a, .toolbar button {
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.45rem 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .toolbar button.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .sheet {
+            max-width: 920px;
+            margin: 1.25rem auto 2rem;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 1.75rem 2rem;
+            box-shadow: 0 4px 16px rgba(16,24,40,0.05);
+        }
+        h1 {
+            margin: 0 0 0.25rem;
+            font-size: 1.35rem;
+            letter-spacing: -0.02em;
+        }
+        .meta {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .summary .item {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            background: #FAFBFC;
+        }
+        .summary .label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-weight: 600;
+        }
+        .summary .value {
+            margin-top: 0.25rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.55rem 0.4rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--muted);
+            background: #F8FAFC;
+        }
+        td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 2rem 1rem;
+        }
+        .footer-note {
+            margin-top: 1.25rem;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none !important; }
+            .sheet {
+                margin: 0;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                max-width: none;
+                padding: 0;
+            }
+        }
+        @media (max-width: 700px) {
+            .summary { grid-template-columns: 1fr; }
+            .sheet { margin: 0.75rem; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="/withholding{% if year or month or tax_code %}?{% if year %}year={{ year }}&{% endif %}{% if month %}month={{ month }}&{% endif %}{% if tax_code %}tax_code={{ tax_code }}{% endif %}{% endif %}">Kembali</a>
+        <button class="primary" onclick="window.print()">Cetak / PDF</button>
+    </div>
+
+    <div class="sheet">
+        <h1>Laporan Potongan PPh</h1>
+        <div class="meta">
+            Corporate Tax Manager
+            &mdash;
+            {% if year or month %}
+                Periode:
+                {% if month %}{{ month }}/{% endif %}{{ year or 'Semua tahun' }}
+            {% else %}
+                Semua periode
+            {% endif %}
+            {% if tax_code %}
+                &mdash; Jenis: {{ tax_code }}
+            {% endif %}
+            <br>
+            Dibuat: {{ generated_at.strftime('%d %b %Y %H:%M') }}
+        </div>
+
+        <div class="summary">
+            <div class="item">
+                <div class="label">Jumlah transaksi</div>
+                <div class="value">{{ total }}</div>
+            </div>
+            <div class="item">
+                <div class="label">Total bruto</div>
+                <div class="value">Rp {{ "{:,.0f}".format(bruto_total) }}</div>
+            </div>
+            <div class="item">
+                <div class="label">Total PPh</div>
+                <div class="value">Rp {{ "{:,.0f}".format(grand_total) }}</div>
+            </div>
+        </div>
+
+        {% if records %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Vendor</th>
+                    <th>Jenis</th>
+                    <th>Kode</th>
+                    <th class="num">Bruto</th>
+                    <th class="num">PPh</th>
+                    <th>Tanggal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
+                {% for r in records %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ r.vendor }}</td>
+                    <td>{{ r.obj_type }}</td>
+                    <td>{{ labels.get(r.tax_code, r.tax_code) }}</td>
+                    <td class="num">Rp {{ "{:,.0f}".format(r.amount) }}</td>
+                    <td class="num">Rp {{ "{:,.0f}".format(r.pph_amount) }}</td>
+                    <td>{{ r.created_at[:10] if r.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty">Tidak ada data untuk filter ini.</div>
+        {% endif %}
+
+        <div class="footer-note">
+            Dokumen ini adalah preview laporan internal. Gunakan tombol Cetak / PDF pada browser untuk menyimpan sebagai PDF.
+        </div>
+    </div>
+</body>
+</html>

@@ -379,7 +379,8 @@ class TaxDB:
 
     def get_all_documents(self, limit: int = 100, offset: int = 0,
                           category: Optional[str] = None,
-                          status_filter: Optional[str] = None) -> Tuple[List[Dict], int]:
+                          status_filter: Optional[str] = None,
+                          q: Optional[str] = None) -> Tuple[List[Dict], int]:
         conn = self._conn()
         cursor = conn.cursor()
 
@@ -391,6 +392,10 @@ class TaxDB:
         if status_filter:
             conditions.append("status = ?")
             params.append(status_filter)
+        if q:
+            conditions.append("(title LIKE ? OR COALESCE(notes,'') LIKE ? OR category LIKE ?)")
+            like = f"%{q.strip()}%"
+            params.extend([like, like, like])
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
         cursor.execute(f"SELECT COUNT(*) FROM documents {where}", params)
@@ -405,6 +410,21 @@ class TaxDB:
         rows = [dict(r) for r in cursor.fetchall()]
         conn.close()
         return rows, total
+
+    def update_document_status(self, doc_id: int, status: str) -> bool:
+        status = (status or '').strip()
+        if not status:
+            raise ValueError('Status dokumen harus diisi')
+        allowed = {'Lengkap', 'Kurang', 'Arsip', 'Dalam Proses'}
+        if status not in allowed:
+            raise ValueError(f'Status tidak valid: {status}')
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE documents SET status = ? WHERE id = ?", (status, doc_id))
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
 
     def delete_document(self, doc_id: int) -> bool:
         conn = self._conn()
@@ -482,10 +502,13 @@ class TaxDB:
     # DASHBOARD AGGREGATION
     # ═══════════════════════════════════════════════════════
 
-    def get_dashboard_data(self) -> Dict:
-        """Aggregate data for main dashboard."""
+    def get_dashboard_data(self, year: Optional[int] = None, month: Optional[int] = None) -> Dict:
+        """Aggregate data for main dashboard for a selected period."""
         now = datetime.now()
-        year, month = now.year, now.month
+        year = int(year or now.year)
+        month = int(month or now.month)
+        if month < 1 or month > 12:
+            month = now.month
 
         conn = self._conn()
         cursor = conn.cursor()

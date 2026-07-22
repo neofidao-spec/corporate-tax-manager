@@ -66,12 +66,13 @@ def make_label(text, size=14, color=TEXT, bold=False, halign='left', height=None
         valign='middle',
     )
     widget.size_hint_y = None
-    widget.height = dp(height or (size + 16))
+    # Slightly tighter vertical rhythm for readability on small screens
+    widget.height = dp(height or (size + 12))
     widget.bind(size=lambda w, _v: setattr(w, 'text_size', (w.width, None)))
     return widget
 
 
-def make_button(text, bg=PRIMARY, fg=WHITE, height=44):
+def make_button(text, bg=PRIMARY, fg=WHITE, height=42):
     return Button(
         text=text,
         size_hint_y=None,
@@ -79,7 +80,7 @@ def make_button(text, bg=PRIMARY, fg=WHITE, height=44):
         background_normal='',
         background_color=bg,
         color=fg,
-        font_size=sp(13),
+        font_size=sp(12.5),
         bold=True,
     )
 
@@ -114,16 +115,16 @@ class BaseScreen(Screen):
         super().__init__(name=name, **kwargs)
         root = BoxLayout(orientation='vertical')
 
-        header = BoxLayout(size_hint_y=None, height=dp(52), padding=[dp(12), dp(4)])
+        header = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(12), dp(4)])
         paint_bar(header, SURFACE)
-        header.add_widget(make_label(title_text, 17, TEXT, True, 'left'))
+        header.add_widget(make_label(title_text, 16, TEXT, True, 'left'))
         root.add_widget(header)
 
         self.scroll = ScrollView(do_scroll_x=False)
         self.body = BoxLayout(
             orientation='vertical',
-            spacing=dp(8),
-            padding=[dp(12), dp(10), dp(12), dp(16)],
+            spacing=dp(6),
+            padding=[dp(12), dp(8), dp(12), dp(14)],
             size_hint_y=None,
         )
         self.body.bind(minimum_height=self.body.setter('height'))
@@ -630,7 +631,7 @@ class RootLayout(BoxLayout):
         self.sm.add_widget(CalendarScreen())
         self.add_widget(self.sm)
 
-        nav = BoxLayout(size_hint_y=None, height=dp(56), spacing=dp(2), padding=[dp(4), dp(4)])
+        nav = BoxLayout(size_hint_y=None, height=dp(52), spacing=dp(2), padding=[dp(4), dp(4)])
         paint_bar(nav, SURFACE)
         self.nav_buttons = {}
         for screen_name, title in [
@@ -644,7 +645,7 @@ class RootLayout(BoxLayout):
                 title,
                 PRIMARY if screen_name == 'dashboard' else SURFACE_MUTED,
                 WHITE if screen_name == 'dashboard' else TEXT,
-                44,
+                40,
             )
             button.bind(on_release=lambda _b, n=screen_name: self.goto(n))
             nav.add_widget(button)

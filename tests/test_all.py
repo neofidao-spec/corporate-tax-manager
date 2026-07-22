@@ -373,16 +373,42 @@ class TestWebApp(unittest.TestCase):
 
     def test_withholding_crud(self):
         """Full CRUD cycle for withholding records."""
-        # Add
         self.client.post('/withholding/add', data={
             'vendor': 'TestCo', 'amount': 50000000, 'obj_type': 'Jasa',
             'tax_code': 'pph23', 'tariff': '2%', 'description': 'Test',
         }, follow_redirects=True)
-
-        # Read (via export)
         r = self.client.get('/withholding/export')
         lines = r.data.decode().strip().split('\n')
-        self.assertGreater(len(lines), 1)  # header + 1 record
+        self.assertGreater(len(lines), 1)
+
+    def test_document_search_and_status_update(self):
+        path = '/data/data/com.termux/files/home/test_corporate_tax_docs.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            did = db.add_document('Faktur ABC', 'Faktur Pajak', 'Kurang', 2026, 7, 'catatan uji')
+            rows, total = db.get_all_documents(q='ABC')
+            self.assertEqual(total, 1)
+            self.assertEqual(rows[0]['id'], did)
+            ok = db.update_document_status(did, 'Lengkap')
+            self.assertTrue(ok)
+            rows, _ = db.get_all_documents(status_filter='Lengkap')
+            self.assertEqual(rows[0]['status'], 'Lengkap')
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_dashboard_period_selector(self):
+        r = self.client.get('/?year=2025&month=3')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'2025', r.data)
+
+    def test_print_withholding_preview(self):
+        r = self.client.get('/withholding/print')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Laporan Potongan PPh', r.data)
 
 
 if __name__ == '__main__':

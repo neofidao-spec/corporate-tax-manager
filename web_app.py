@@ -60,7 +60,13 @@ def create_app(testing=False):
 
     @app.route('/')
     def index():
-        data = g.db.get_dashboard_data()
+        now = date.today()
+        year = request.args.get('year', now.year, type=int) or now.year
+        month = request.args.get('month', now.month, type=int) or now.month
+        if month < 1 or month > 12:
+            month = now.month
+
+        data = g.db.get_dashboard_data(year=year, month=month)
         deadlines = g.db.get_upcoming_deadlines()
         yearly = g.db.get_yearly_summary(data['year'])
 
@@ -87,6 +93,12 @@ def create_app(testing=False):
                 'pct': max(pct, 2 if val > 0 else 0),
             })
 
+        # Period navigation
+        prev_m = month - 1 if month > 1 else 12
+        prev_y = year if month > 1 else year - 1
+        next_m = month + 1 if month < 12 else 1
+        next_y = year if month < 12 else year + 1
+
         return render_template(
             'index.html',
             dash=data,
@@ -94,6 +106,13 @@ def create_app(testing=False):
             yearly=yearly,
             chart=chart,
             chart_max=chart_max,
+            selected_year=year,
+            selected_month=month,
+            prev_y=prev_y,
+            prev_m=prev_m,
+            next_y=next_y,
+            next_m=next_m,
+            month_labels=labels,
         )
 
     # ══════════════════════════════════════════════════
@@ -254,15 +273,23 @@ def create_app(testing=False):
         per_page = 20
         category = request.args.get('category')
         status_filter = request.args.get('status')
+        q = (request.args.get('q') or '').strip() or None
 
         docs, total = g.db.get_all_documents(
             limit=per_page, offset=(page - 1) * per_page,
-            category=category, status_filter=status_filter,
+            category=category, status_filter=status_filter, q=q,
         )
         total_pages = max(1, (total + per_page - 1) // per_page)
-        return render_template('documents.html', docs=docs, page=page,
-                               total_pages=total_pages, total=total,
-                               category=category, status_filter=status_filter)
+        return render_template(
+            'documents.html',
+            docs=docs,
+            page=page,
+            total_pages=total_pages,
+            total=total,
+            category=category,
+            status_filter=status_filter,
+            q=q or '',
+        )
 
     @app.route('/documents/add', methods=['POST'])
     def add_document():
@@ -283,11 +310,55 @@ def create_app(testing=False):
             flash(f'Gagal: {str(e)}', 'error')
         return redirect(url_for('documents'))
 
+    @app.route('/documents/<int:did>/status', methods=['POST'])
+    def update_document_status(did):
+        try:
+            status = request.form.get('status', '').strip()
+            ok = g.db.update_document_status(did, status)
+            if ok:
+                flash(f'Status dokumen diubah ke {status}', 'success')
+            else:
+                flash('Dokumen tidak ditemukan', 'error')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal mengubah status: {str(e)}', 'error')
+        return redirect(url_for(
+            'documents',
+            page=request.args.get('page', 1),
+            category=request.args.get('category'),
+            status=request.args.get('status'),
+            q=request.args.get('q'),
+        ))
+
     @app.route('/documents/delete/<int:did>', methods=['POST'])
     def delete_document(did):
         g.db.delete_document(did)
         flash('Dokumen dihapus', 'success')
         return redirect(url_for('documents'))
+
+    @app.route('/withholding/print')
+    def print_withholding():
+        """Print-friendly statement preview of withholding log."""
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        tax_code = request.args.get('tax_code')
+        records, total = g.db.get_all_withholding(
+            limit=10000, year=year, month=month, tax_code=tax_code,
+        )
+        grand_total = sum(float(r.get('pph_amount') or 0) for r in records)
+        bruto_total = sum(float(r.get('amount') or 0) for r in records)
+        return render_template(
+            'print_withholding.html',
+            records=records,
+            total=total,
+            grand_total=grand_total,
+            bruto_total=bruto_total,
+            year=year,
+            month=month,
+            tax_code=tax_code,
+            generated_at=datetime.now(),
+        )
 
     # ══════════════════════════════════════════════════
     # ROUTES: Calendar
