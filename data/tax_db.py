@@ -487,29 +487,159 @@ class TaxDB:
     # REMINDERS / DEADLINES
     # ═══════════════════════════════════════════════════════
 
+    def list_reminders(self, active_only: bool = False) -> List[Dict]:
+        conn = self._conn()
+        cursor = conn.cursor()
+        if active_only:
+            cursor.execute("""
+                SELECT id, title, description, deadline_date, tax_code,
+                       is_recurring, is_active, created_at
+                FROM tax_reminders
+                WHERE is_active = 1
+                ORDER BY CAST(deadline_date AS INTEGER), title
+            """)
+        else:
+            cursor.execute("""
+                SELECT id, title, description, deadline_date, tax_code,
+                       is_recurring, is_active, created_at
+                FROM tax_reminders
+                ORDER BY CAST(deadline_date AS INTEGER), title
+            """)
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def get_reminder(self, reminder_id: int) -> Optional[Dict]:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, description, deadline_date, tax_code,
+                   is_recurring, is_active, created_at
+            FROM tax_reminders WHERE id = ?
+        """, (reminder_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def add_reminder(self, title: str, deadline_day: int, description: str = '',
+                     tax_code: str = '', is_recurring: bool = True,
+                     is_active: bool = True) -> int:
+        title = (title or '').strip()
+        if not title:
+            raise ValueError('Judul deadline harus diisi')
+        try:
+            day = int(deadline_day)
+        except (TypeError, ValueError):
+            raise ValueError('Tanggal deadline harus angka 1-31')
+        if day < 1 or day > 31:
+            raise ValueError('Tanggal deadline harus antara 1-31')
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tax_reminders
+                (title, description, deadline_date, tax_code, is_recurring, is_active)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            title,
+            description or '',
+            str(day),
+            (tax_code or '').strip() or None,
+            1 if is_recurring else 0,
+            1 if is_active else 0,
+        ))
+        conn.commit()
+        rid = int(cursor.lastrowid or 0)
+        conn.close()
+        return rid
+
+    def update_reminder(self, reminder_id: int, title: str, deadline_day: int,
+                        description: str = '', tax_code: str = '',
+                        is_recurring: bool = True, is_active: bool = True) -> bool:
+        title = (title or '').strip()
+        if not title:
+            raise ValueError('Judul deadline harus diisi')
+        try:
+            day = int(deadline_day)
+        except (TypeError, ValueError):
+            raise ValueError('Tanggal deadline harus angka 1-31')
+        if day < 1 or day > 31:
+            raise ValueError('Tanggal deadline harus antara 1-31')
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE tax_reminders
+            SET title = ?, description = ?, deadline_date = ?, tax_code = ?,
+                is_recurring = ?, is_active = ?
+            WHERE id = ?
+        """, (
+            title,
+            description or '',
+            str(day),
+            (tax_code or '').strip() or None,
+            1 if is_recurring else 0,
+            1 if is_active else 0,
+            reminder_id,
+        ))
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
+
+    def delete_reminder(self, reminder_id: int) -> bool:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tax_reminders WHERE id = ?", (reminder_id,))
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return deleted
+
+    def get_calendar_deadlines_map(self) -> Dict[int, str]:
+        """Map day-of-month -> short label for calendar grid (active recurring)."""
+        reminders = self.list_reminders(active_only=True)
+        day_map: Dict[int, List[str]] = {}
+        for r in reminders:
+            if not r.get('is_recurring', 1):
+                continue
+            try:
+                day = int(r.get('deadline_date') or 0)
+            except (TypeError, ValueError):
+                continue
+            if day < 1 or day > 31:
+                continue
+            label = (r.get('title') or r.get('tax_code') or f'Tgl {day}').strip()
+            # Keep short for grid cells
+            short = label if len(label) <= 14 else (label[:12] + '…')
+            day_map.setdefault(day, []).append(short)
+        return {d: ' / '.join(labels) for d, labels in sorted(day_map.items())}
+
     def get_upcoming_deadlines(self, days_ahead: int = 30) -> List[Dict]:
         """Get upcoming tax deadlines within the specified days."""
         today = date.today()
         conn = self._conn()
         cursor = conn.cursor()
 
-        # Get recurring reminders
+        # Get active reminders (recurring monthly day)
         cursor.execute("""
-            SELECT id, title, description, deadline_date, tax_code
+            SELECT id, title, description, deadline_date, tax_code, is_recurring
             FROM tax_reminders
-            WHERE is_active = 1 AND is_recurring = 1
+            WHERE is_active = 1
             ORDER BY CAST(deadline_date AS INTEGER)
         """)
         reminders = [dict(r) for r in cursor.fetchall()]
         conn.close()
 
         deadlines = []
-        today_ord = today.toordinal()
-
         for r in reminders:
-            dl_day = int(r['deadline_date'])
-            # Construct deadline date for this month
-            for m_offset in range(3):  # this month, next month, month after
+            try:
+                dl_day = int(r['deadline_date'])
+            except (TypeError, ValueError):
+                continue
+            if dl_day < 1 or dl_day > 31:
+                continue
+
+            # Recurring monthly: project this month + next 2 months
+            for m_offset in range(3):
                 y = today.year
                 m = today.month + m_offset
                 if m > 12:
@@ -522,7 +652,7 @@ class TaxDB:
 
                 diff = (dl - today).days
                 if diff < -15:
-                    continue  # Already way past
+                    continue
                 if diff > days_ahead:
                     continue
 

@@ -522,7 +522,7 @@ class DocumentsScreen(BaseScreen):
             card = BoxLayout(
                 orientation='vertical',
                 size_hint_y=None,
-                height=dp(78),
+                height=dp(96),
                 padding=[dp(10), dp(8)],
                 spacing=dp(2),
             )
@@ -533,13 +533,104 @@ class DocumentsScreen(BaseScreen):
             year = doc.get('tax_year')
             month = doc.get('tax_month')
             period = f'{year}-{int(month):02d}' if year and month else (str(year) if year else '-')
-            card.add_widget(make_label(f'{title}', 13, TEXT, True, 'left', 22))
+            top = BoxLayout(size_hint_y=None, height=dp(24), spacing=dp(6))
+            top.add_widget(make_label(f'{title}', 13, TEXT, True, 'left', 22))
+            edit_btn = make_button('Edit', SURFACE_MUTED, TEXT, 24)
+            edit_btn.size_hint_x = None
+            edit_btn.width = dp(56)
+            edit_btn.bind(on_release=lambda _b, d=doc: self.show_edit_popup(d))
+            top.add_widget(edit_btn)
+            card.add_widget(top)
             card.add_widget(make_label(f'{category} · {status} · {period}', 11, SUBTLE, False, 'left', 18))
             self.body.add_widget(card)
 
     def apply_search(self):
         self.search_query = (self.search_input.text or '').strip()
         self.on_enter()
+
+    def show_edit_popup(self, doc):
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
+        content.add_widget(make_label('Edit Dokumen', 15, TEXT, True, 'left', 28))
+        title = TextInput(
+            text=str(doc.get('title') or ''),
+            hint_text='Nama dokumen',
+            multiline=False,
+            size_hint_y=None,
+            height=dp(38),
+        )
+        cats = ['Faktur Pajak', 'SPT Tahunan', 'SPT Masa', 'Bukti Potong', 'Laporan', 'Lainnya', 'Umum']
+        cat_text = str(doc.get('category') or 'Faktur Pajak')
+        if cat_text not in cats:
+            cats = [cat_text] + cats
+        category = Spinner(text=cat_text, values=cats, size_hint_y=None, height=dp(38))
+        statuses = ['Lengkap', 'Kurang', 'Arsip', 'Dalam Proses']
+        st_text = str(doc.get('status') or 'Lengkap')
+        if st_text not in statuses:
+            statuses = [st_text] + statuses
+        status = Spinner(text=st_text, values=statuses, size_hint_y=None, height=dp(38))
+        year_in = TextInput(
+            text=str(doc.get('tax_year') or ''),
+            hint_text='Tahun pajak',
+            multiline=False,
+            input_filter='int',
+            size_hint_y=None,
+            height=dp(38),
+        )
+        month_in = TextInput(
+            text=str(doc.get('tax_month') or ''),
+            hint_text='Bulan (1-12)',
+            multiline=False,
+            input_filter='int',
+            size_hint_y=None,
+            height=dp(38),
+        )
+        notes = TextInput(
+            text=str(doc.get('notes') or ''),
+            hint_text='Catatan',
+            multiline=True,
+            size_hint_y=None,
+            height=dp(64),
+        )
+        for w in (title, category, status, year_in, month_in, notes):
+            content.add_widget(w)
+
+        popup = Popup(title='Edit Dokumen', content=content, size_hint=(0.92, 0.78), auto_dismiss=False)
+
+        def save(_btn):
+            try:
+                name = (title.text or '').strip()
+                if not name:
+                    raise ValueError('Nama dokumen harus diisi')
+                ty = int(year_in.text) if (year_in.text or '').strip() else None
+                tm = int(month_in.text) if (month_in.text or '').strip() else None
+                TaxDB().update_document(
+                    int(doc['id']),
+                    title=name,
+                    category=category.text,
+                    status=status.text,
+                    tax_year=ty,
+                    tax_month=tm,
+                    notes=notes.text or '',
+                )
+                popup.dismiss()
+                self.on_enter()
+            except Exception as exc:
+                err = Popup(
+                    title='Error',
+                    content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                    size_hint=(0.8, 0.3),
+                )
+                err.open()
+
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
+        save_btn.bind(on_release=save)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
+        cancel_btn.bind(on_release=lambda _b: popup.dismiss())
+        actions.add_widget(save_btn)
+        actions.add_widget(cancel_btn)
+        content.add_widget(actions)
+        popup.open()
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
@@ -608,14 +699,26 @@ class CalendarScreen(BaseScreen):
     def build_ui(self):
         now = date.today()
         month_name = calendar.month_name[now.month].upper()
-        self.body.add_widget(make_label(f'{month_name} {now.year}', 18, NAVY, True, 'center', 32))
+        self.body.add_widget(make_label(f'{month_name} {now.year}', 16, TEXT, True, 'center', 28))
+
+        # Load user-configurable deadlines
+        try:
+            db = TaxDB()
+            deadlines = db.get_calendar_deadlines_map()
+            reminders = db.list_reminders(active_only=False)
+        except Exception:
+            deadlines = {10: 'PPN', 15: 'Final', 20: 'P21/23', 21: 'P26'}
+            reminders = []
+
+        add_btn = make_button('+ Deadline', PRIMARY, WHITE, 38)
+        add_btn.bind(on_release=lambda _b: self.show_add_reminder())
+        self.body.add_widget(add_btn)
 
         header = GridLayout(cols=7, spacing=dp(2), size_hint_y=None, height=dp(28))
         for day_name in ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']:
-            header.add_widget(make_label(day_name, 11, NAVY, True, 'center', 24))
+            header.add_widget(make_label(day_name, 11, TEXT, True, 'center', 24))
         self.body.add_widget(header)
 
-        deadlines = {10: 'PPN', 15: 'Final', 20: 'P21/23', 21: 'P26'}
         weeks = calendar.monthcalendar(now.year, now.month)
         grid = GridLayout(cols=7, spacing=dp(2), size_hint_y=None, height=dp(len(weeks) * 44))
         for week in weeks:
@@ -624,15 +727,141 @@ class CalendarScreen(BaseScreen):
                     grid.add_widget(Widget(size_hint_y=None, height=dp(42)))
                     continue
                 text = str(day_num)
-                color = NAVY
+                color = TEXT
                 if day_num in deadlines:
-                    text = f'{day_num}\n{deadlines[day_num]}'
+                    short = deadlines[day_num]
+                    if len(short) > 10:
+                        short = short[:9] + '…'
+                    text = f'{day_num}\n{short}'
                     color = ERROR if day_num < now.day else GREEN
                 elif day_num == now.day:
                     color = ACCENT
                 grid.add_widget(make_label(text, 10, color, True, 'center', 42))
         self.body.add_widget(grid)
-        self.body.add_widget(make_label('PPN tgl 10 | Final tgl 15 | PPh 21/23 tgl 20 | PPh 26 tgl 21', 11, SUBTLE, False, 'left', 28))
+
+        self.body.add_widget(make_label('Deadline aktif (bisa diedit)', 13, TEXT, True, 'left', 24))
+        if not reminders:
+            self.body.add_widget(make_label('Belum ada deadline custom', 12, SUBTLE, False, 'left', 28))
+        for rem in reminders:
+            row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(6), padding=[dp(8), dp(4)])
+            paint_card(row)
+            active = bool(rem.get('is_active'))
+            label = f"tgl {rem.get('deadline_date')} · {rem.get('title')}"
+            if not active:
+                label += ' (nonaktif)'
+            row.add_widget(make_label(label, 11, TEXT if active else SUBTLE, False, 'left', 34))
+            edit_btn = make_button('Edit', SURFACE_MUTED, TEXT, 30)
+            edit_btn.size_hint_x = None
+            edit_btn.width = dp(52)
+            edit_btn.bind(on_release=lambda _b, r=rem: self.show_edit_reminder(r))
+            del_btn = make_button('Hapus', ERROR, WHITE, 30)
+            del_btn.size_hint_x = None
+            del_btn.width = dp(58)
+            del_btn.bind(on_release=lambda _b, rid=rem.get('id'): self.delete_reminder(rid))
+            row.add_widget(edit_btn)
+            row.add_widget(del_btn)
+            self.body.add_widget(row)
+
+    def show_add_reminder(self):
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
+        content.add_widget(make_label('Tambah Deadline', 15, TEXT, True, 'left', 28))
+        title = TextInput(hint_text='Judul (contoh: SPT Masa PPN)', multiline=False, size_hint_y=None, height=dp(38))
+        day = TextInput(hint_text='Tanggal 1-31', text='10', multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        code = TextInput(hint_text='Kode (ppn/pph23)', multiline=False, size_hint_y=None, height=dp(38))
+        desc = TextInput(hint_text='Deskripsi (opsional)', multiline=False, size_hint_y=None, height=dp(38))
+        for w in (title, day, code, desc):
+            content.add_widget(w)
+        popup = Popup(title='Deadline', content=content, size_hint=(0.92, 0.62), auto_dismiss=False)
+
+        def save(_btn):
+            try:
+                TaxDB().add_reminder(
+                    title=(title.text or '').strip(),
+                    deadline_day=int(day.text or 0),
+                    description=desc.text or '',
+                    tax_code=code.text or '',
+                    is_recurring=True,
+                    is_active=True,
+                )
+                popup.dismiss()
+                self.on_enter()
+            except Exception as exc:
+                err = Popup(
+                    title='Error',
+                    content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                    size_hint=(0.8, 0.3),
+                )
+                err.open()
+
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
+        save_btn.bind(on_release=save)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
+        cancel_btn.bind(on_release=lambda _b: popup.dismiss())
+        actions.add_widget(save_btn)
+        actions.add_widget(cancel_btn)
+        content.add_widget(actions)
+        popup.open()
+
+    def show_edit_reminder(self, rem):
+        content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
+        content.add_widget(make_label('Edit Deadline', 15, TEXT, True, 'left', 28))
+        title = TextInput(text=str(rem.get('title') or ''), multiline=False, size_hint_y=None, height=dp(38))
+        day = TextInput(text=str(rem.get('deadline_date') or ''), multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        code = TextInput(text=str(rem.get('tax_code') or ''), multiline=False, size_hint_y=None, height=dp(38))
+        desc = TextInput(text=str(rem.get('description') or ''), multiline=False, size_hint_y=None, height=dp(38))
+        active_spin = Spinner(
+            text='Aktif' if rem.get('is_active') else 'Nonaktif',
+            values=['Aktif', 'Nonaktif'],
+            size_hint_y=None,
+            height=dp(38),
+        )
+        for w in (title, day, code, desc, active_spin):
+            content.add_widget(w)
+        popup = Popup(title='Edit Deadline', content=content, size_hint=(0.92, 0.7), auto_dismiss=False)
+
+        def save(_btn):
+            try:
+                TaxDB().update_reminder(
+                    int(rem['id']),
+                    title=(title.text or '').strip(),
+                    deadline_day=int(day.text or 0),
+                    description=desc.text or '',
+                    tax_code=code.text or '',
+                    is_recurring=True,
+                    is_active=(active_spin.text == 'Aktif'),
+                )
+                popup.dismiss()
+                self.on_enter()
+            except Exception as exc:
+                err = Popup(
+                    title='Error',
+                    content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                    size_hint=(0.8, 0.3),
+                )
+                err.open()
+
+        actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
+        save_btn.bind(on_release=save)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
+        cancel_btn.bind(on_release=lambda _b: popup.dismiss())
+        actions.add_widget(save_btn)
+        actions.add_widget(cancel_btn)
+        content.add_widget(actions)
+        popup.open()
+
+    def delete_reminder(self, rid):
+        try:
+            TaxDB().delete_reminder(int(rid))
+            self.on_enter()
+        except Exception as exc:
+            err = Popup(
+                title='Error',
+                content=make_label(str(exc), 12, ERROR, False, 'center', 60),
+                size_hint=(0.8, 0.3),
+            )
+            err.open()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -642,9 +871,9 @@ class ErrorScreen(Screen):
     def __init__(self, message, **kwargs):
         super().__init__(name='error', **kwargs)
         box = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(12))
-        paint_bar(box, CREAM)
+        paint_bar(box, SURFACE)
         box.add_widget(make_label('Gagal Memulai Aplikasi', 18, ERROR, True, 'center', 36))
-        box.add_widget(make_label(message, 12, NAVY, False, 'left', 220))
+        box.add_widget(make_label(message, 12, TEXT, False, 'left', 220))
         self.add_widget(box)
 
 

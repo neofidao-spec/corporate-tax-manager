@@ -436,10 +436,18 @@ def create_app(testing=False):
         now = date.today()
         y = request.args.get('year', now.year, type=int)
         m = request.args.get('month', now.month, type=int)
+        if m < 1 or m > 12:
+            m = now.month
 
         cal = cal_mod.monthcalendar(y, m)
         month_name = cal_mod.month_name[m]
-        deadlines_map = {10: 'PPN', 15: 'PPh Final', 20: 'PPh 21/23', 21: 'PPh 26'}
+        # User-configurable deadlines from DB (fallback empty)
+        try:
+            deadlines_map = g.db.get_calendar_deadlines_map()
+            reminders = g.db.list_reminders(active_only=False)
+        except Exception:
+            deadlines_map = {10: 'PPN', 15: 'PPh Final', 20: 'PPh 21/23', 21: 'PPh 26'}
+            reminders = []
 
         # Navigation
         prev_m = m - 1 if m > 1 else 12
@@ -447,9 +455,87 @@ def create_app(testing=False):
         next_m = m + 1 if m < 12 else 1
         next_y = y if m < 12 else y + 1
 
-        return render_template('calendar.html', cal=cal, month_name=month_name,
-                               year=y, month=m, today=now, deadlines=deadlines_map,
-                               prev_m=prev_m, prev_y=prev_y, next_m=next_m, next_y=next_y)
+        return render_template(
+            'calendar.html',
+            cal=cal,
+            month_name=month_name,
+            year=y,
+            month=m,
+            today=now,
+            deadlines=deadlines_map,
+            reminders=reminders,
+            prev_m=prev_m,
+            prev_y=prev_y,
+            next_m=next_m,
+            next_y=next_y,
+        )
+
+    @app.route('/calendar/reminders/add', methods=['POST'])
+    def add_calendar_reminder():
+        try:
+            title = request.form.get('title', '').strip()
+            day = request.form.get('deadline_day', type=int)
+            description = request.form.get('description', '')
+            tax_code = request.form.get('tax_code', '')
+            # Checkbox: present + on => active; missing => inactive only if form sent it off
+            is_active = request.form.get('is_active') == 'on'
+            g.db.add_reminder(
+                title=title,
+                deadline_day=day,
+                description=description,
+                tax_code=tax_code,
+                is_recurring=True,
+                is_active=is_active,
+            )
+            flash('Deadline ditambahkan', 'success')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal menambah deadline: {e}', 'error')
+        y = request.args.get('year') or request.form.get('year')
+        m = request.args.get('month') or request.form.get('month')
+        return redirect(url_for('calendar_view', year=y, month=m))
+
+    @app.route('/calendar/reminders/<int:rid>/edit', methods=['POST'])
+    def edit_calendar_reminder(rid):
+        try:
+            title = request.form.get('title', '').strip()
+            day = request.form.get('deadline_day', type=int)
+            description = request.form.get('description', '')
+            tax_code = request.form.get('tax_code', '')
+            is_active = request.form.get('is_active') == 'on'
+            ok = g.db.update_reminder(
+                rid,
+                title=title,
+                deadline_day=day,
+                description=description,
+                tax_code=tax_code,
+                is_recurring=True,
+                is_active=is_active,
+            )
+            if ok:
+                flash('Deadline diperbarui', 'success')
+            else:
+                flash('Deadline tidak ditemukan', 'error')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal memperbarui: {e}', 'error')
+        y = request.args.get('year') or request.form.get('year')
+        m = request.args.get('month') or request.form.get('month')
+        return redirect(url_for('calendar_view', year=y, month=m))
+
+    @app.route('/calendar/reminders/<int:rid>/delete', methods=['POST'])
+    def delete_calendar_reminder(rid):
+        try:
+            ok = g.db.delete_reminder(rid)
+            flash('Deadline dihapus' if ok else 'Deadline tidak ditemukan',
+                  'success' if ok else 'error')
+        except Exception as e:
+            flash(f'Gagal menghapus: {e}', 'error')
+        y = request.args.get('year') or request.form.get('year')
+        m = request.args.get('month') or request.form.get('month')
+        return redirect(url_for('calendar_view', year=y, month=m))
 
     # ══════════════════════════════════════════════════
     # ROUTES: API (JSON)

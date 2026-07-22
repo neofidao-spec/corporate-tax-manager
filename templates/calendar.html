@@ -4,20 +4,23 @@
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <h2>Kalender pajak</h2>
-        <div class="subtitle">Deadline pelaporan dan penyetoran pajak</div>
+        <div class="subtitle">Deadline pelaporan — bisa disesuaikan user</div>
     </div>
-    <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
         <a href="?year={{ prev_y }}&month={{ prev_m }}" class="btn btn-outline-copper btn-sm">
             <i class="bi bi-chevron-left"></i>
         </a>
-        <span class="mx-2 fw-semibold">{{ month_name }} {{ year }}</span>
+        <span class="fw-semibold">{{ month_name }} {{ year }}</span>
         <a href="?year={{ next_y }}&month={{ next_m }}" class="btn btn-outline-copper btn-sm">
             <i class="bi bi-chevron-right"></i>
         </a>
+        <button class="btn btn-copper btn-sm" data-bs-toggle="modal" data-bs-target="#addReminderModal">
+            <i class="bi bi-plus-lg"></i> Deadline
+        </button>
     </div>
 </div>
 
-<div class="card">
+<div class="card mb-3">
     <div class="card-body p-3">
         <table class="table table-bordered text-center mb-0">
             <thead>
@@ -43,7 +46,7 @@
                             <div class="fw-semibold" style="font-size: 0.95rem;">{{ day }}</div>
                             {% if day in deadlines %}
                             <div class="badge badge-deadline bg-{{ 'danger' if (day < today.day and month == today.month and year == today.year) else 'primary' }}"
-                                 style="font-size: 0.6rem;">
+                                 style="font-size: 0.58rem; white-space: normal;">
                                 {{ deadlines[day] }}
                             </div>
                             {% endif %}
@@ -57,76 +60,174 @@
     </div>
 </div>
 
-<div class="row g-3 mt-3">
-    <div class="col-md-6">
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-check me-2"></i>Daftar deadline (bisa diedit)</span>
+                <span class="text-muted" style="font-size:0.8rem;">{{ reminders|length }} item</span>
+            </div>
+            <div class="card-body p-0">
+                {% if reminders %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead>
+                            <tr class="table-custom">
+                                <th>Tgl</th>
+                                <th>Judul</th>
+                                <th>Kode</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reminders %}
+                            <tr class="{% if not r.is_active %}opacity-50{% endif %}">
+                                <td><strong>{{ r.deadline_date }}</strong></td>
+                                <td>
+                                    <div class="fw-semibold">{{ r.title }}</div>
+                                    {% if r.description %}
+                                    <div class="text-muted" style="font-size:0.78rem;">{{ r.description }}</div>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ r.tax_code or '-' }}</code></td>
+                                <td>
+                                    {% if r.is_active %}
+                                    <span class="badge bg-success">Aktif</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Nonaktif</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-copper" data-bs-toggle="modal" data-bs-target="#editReminder{{ r.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="POST" action="/calendar/reminders/{{ r.id }}/delete?year={{ year }}&month={{ month }}"
+                                          class="d-inline" onsubmit="return confirm('Hapus deadline \'{{ r.title }}\'?')">
+                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+
+                            <!-- Edit modal -->
+                            <div class="modal fade" id="editReminder{{ r.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form method="POST" action="/calendar/reminders/{{ r.id }}/edit?year={{ year }}&month={{ month }}">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Edit deadline</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Judul</label>
+                                                    <input type="text" name="title" class="form-control" value="{{ r.title }}" required>
+                                                </div>
+                                                <div class="row g-2">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Tanggal (1-31)</label>
+                                                        <input type="number" name="deadline_day" class="form-control" min="1" max="31"
+                                                               value="{{ r.deadline_date }}" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Kode pajak</label>
+                                                        <input type="text" name="tax_code" class="form-control" value="{{ r.tax_code or '' }}"
+                                                               placeholder="pph23 / ppn">
+                                                    </div>
+                                                    <div class="col-md-4 d-flex align-items-end">
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input" type="checkbox" name="is_active" id="active{{ r.id }}"
+                                                                   {% if r.is_active %}checked{% endif %}>
+                                                            <label class="form-check-label" for="active{{ r.id }}">Aktif</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <label class="form-label">Deskripsi</label>
+                                                    <textarea name="description" class="form-control" rows="2">{{ r.description or '' }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
+                                                <button type="submit" class="btn btn-copper">Simpan</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <p>Belum ada deadline. Tambah deadline custom sesuai kebutuhan perusahaan.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-info-circle me-2"></i> Legenda Deadline
+                <i class="bi bi-info-circle me-2"></i> Catatan
             </div>
             <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <span class="badge bg-primary me-2">PPN</span>
-                        Tanggal 10 — SPT Masa PPN &amp; penyetoran
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-primary me-2">PPh Final</span>
-                        Tanggal 15 — Penyetoran PPh Final (PP 23, sewa)
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-primary me-2">PPh 21/23</span>
-                        Tanggal 20 — Penyetoran PPh 21 dan PPh 23/26 masa
-                    </li>
-                    <li class="mb-2">
-                        <span class="badge bg-primary me-2">PPh 26</span>
-                        Tanggal 21 — Penyetoran PPh 26 masa
-                    </li>
-                    <li class="mt-3">
-                        <span class="badge bg-warning text-dark me-2">Hari Ini</span>
-                        Tanggal aktif saat ini
-                    </li>
-                    <li>
-                        <span class="badge bg-danger me-2">Terlewat</span>
-                        Deadline yang sudah lewat
-                    </li>
+                <ul class="mb-0" style="padding-left:1.1rem; color: var(--text-secondary); font-size:0.9rem;">
+                    <li class="mb-2">Deadline bersifat <strong>bulanan berulang</strong> (tanggal 1–31 setiap bulan).</li>
+                    <li class="mb-2">Nonaktifkan item tanpa menghapus jika hanya ingin menonjolkan sementara.</li>
+                    <li class="mb-2">Grid kalender menampilkan label singkat dari judul deadline aktif.</li>
+                    <li>Dashboard juga memakai daftar deadline aktif yang sama.</li>
                 </ul>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-clock me-2"></i> Jadwal Pelaporan
-            </div>
-            <div class="card-body">
-                <table class="table table-sm table-borderless mb-0">
-                    <tr>
-                        <td><strong>SPT Masa PPN</strong></td>
-                        <td>Akhir bulan berikutnya</td>
-                        <td><span class="text-muted">Setiap bulan</span></td>
-                    </tr>
-                    <tr>
-                        <td><strong>SPT Masa PPh 21</strong></td>
-                        <td>Tgl 20 bulan berikutnya</td>
-                        <td><span class="text-muted">Setiap bulan</span></td>
-                    </tr>
-                    <tr>
-                        <td><strong>SPT Masa PPh 23/26</strong></td>
-                        <td>Tgl 20 bulan berikutnya</td>
-                        <td><span class="text-muted">Setiap bulan</span></td>
-                    </tr>
-                    <tr>
-                        <td><strong>SPT Tahunan PPh Badan</strong></td>
-                        <td>30 April</td>
-                        <td><span class="text-muted">Tahunan</span></td>
-                    </tr>
-                    <tr>
-                        <td><strong>SPT Tahunan PPh OP</strong></td>
-                        <td>31 Maret</td>
-                        <td><span class="text-muted">Tahunan</span></td>
-                    </tr>
-                </table>
-            </div>
+</div>
+
+<!-- Add reminder modal -->
+<div class="modal fade" id="addReminderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/calendar/reminders/add?year={{ year }}&month={{ month }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tambah deadline</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <div class="mb-3">
+                        <label class="form-label">Judul <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="Contoh: SPT Masa PPN" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Tanggal (1-31)</label>
+                            <input type="number" name="deadline_day" class="form-control" min="1" max="31" value="10" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Kode pajak</label>
+                            <input type="text" name="tax_code" class="form-control" placeholder="ppn">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="addActive" checked>
+                                <label class="form-check-label" for="addActive">Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Deskripsi</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Opsional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-copper">Tambah</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

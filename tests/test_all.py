@@ -446,6 +446,48 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'Tahun 2026', body)
         self.assertIn(b'PPh 23', body)
 
+    def test_calendar_reminder_crud(self):
+        path = '/data/data/com.termux/files/home/test_corporate_tax_reminders.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            rid = db.add_reminder('Deadline Uji', 12, 'desc', 'custom', True, True)
+            self.assertGreater(rid, 0)
+            m = db.get_calendar_deadlines_map()
+            self.assertIn(12, m)
+            ok = db.update_reminder(rid, 'Deadline Update', 18, 'd2', 'custom2', True, True)
+            self.assertTrue(ok)
+            rem = db.get_reminder(rid)
+            self.assertIsNotNone(rem)
+            assert rem is not None
+            self.assertEqual(rem['title'], 'Deadline Update')
+            self.assertEqual(str(rem['deadline_date']), '18')
+            ok = db.delete_reminder(rid)
+            self.assertTrue(ok)
+            self.assertIsNone(db.get_reminder(rid))
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_calendar_add_reminder_route(self):
+        r = self.client.post('/calendar/reminders/add', data={
+            'title': 'Custom Route Deadline',
+            'deadline_day': 25,
+            'description': 'via route',
+            'tax_code': 'custom',
+            'is_active': 'on',
+            'year': 2026,
+            'month': 7,
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Custom Route Deadline', r.data)
+        # appears on calendar grid via deadlines map / list
+        r2 = self.client.get('/calendar')
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn(b'Custom Route Deadline', r2.data)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
