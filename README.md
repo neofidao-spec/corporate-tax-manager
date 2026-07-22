@@ -12,17 +12,19 @@
 
 | Fitur | Deskripsi |
 |---|---|
-| **Dashboard** | Ringkasan PPh bulan/tahun, statistik, deadline mendatang, akses cepat |
+| **Dashboard** | Ringkasan PPh bulan/tahun (withholding + PPh 21), MoM comparison, chart, quick actions |
 | **Kalkulator PPh 21** | Pegawai tetap + bukan pegawai, PTKP lengkap (TK0–K3), tarif progresif Pasal 17 |
 | **Kalkulator PPh 23** | Potongan 2% (Jasa/Sewa) / 15% (Dividen/Bunga/Royalti/Hadiah) |
 | **Kalkulator PPh 26** | WPLN (20%), opsi NPWP (beralih ke tarif PPh 23) |
 | **Kalkulator PPN** | PPN Dalam Negeri (DPP / sudah termasuk), PPN Impor |
 | **Kalkulator PPh Badan** | PP 23 (UMKM 0,5%), Pasal 31E (fasilitas 50%), Pasal 17 (22%) |
-| **Kalkulator PPh Final** | Sewa tanah (10%), Konstruksi (2%/3%/4%), Pesangon, PPh 22 Impor |
-| **Log PPh 23/26** | CRUD transaksi potongan, filter per tahun/bulan/jenis, export CSV |
-| **Manajemen Dokumen** | Catat SPT, Faktur Pajak, Bukti Potong — filter kategori & status |
-| **Kalender Pajak** | Visual deadline bulanan (PPN tgl 10, PPh Final tgl 15, PPh 21/23 tgl 20) |
-| **Export CSV** | Download data transaksi untuk rekonsiliasi |
+| **Kalkulator PPh Final** | Sewa tanah, Konstruksi, Pesangon, PPh 22 Impor, Pengalihan Tanah 2,5%, Bunga Deposito 20% |
+| **Log PPh 23/26** | CRUD transaksi potongan, filter, print preview, export CSV |
+| **Log PPh 21** | Payroll log dengan auto-calc, filter, print preview, export CSV |
+| **Laporan Periode** | Ringkasan gabungan per bulan/tahun + print + CSV |
+| **Manajemen Dokumen** | Search, edit status, edit full, filter kategori/status |
+| **Kalender Pajak** | Deadline **user-customizable** (berulang hari 1–31 atau sekali YYYY-MM-DD) |
+| **Android (Kivy)** | Paritas fitur: kalkulator, log, PPh 21, dokumen, kalender, laporan periode |
 | **JSON API** | Endpoint `/api/calculate` dan `/api/dashboard` untuk integrasi |
 
 ---
@@ -43,11 +45,21 @@ python3 web_app.py
 
 ### 2. Android APK (via GitHub Actions)
 
-1. Push ke GitHub Anda sendiri
-2. Buka **Actions** → **Build Corporate Tax Manager APK** → **Run workflow**
-3. Download APK dari **Artifacts**
+**Build artifact (setiap push ke main):**
+1. Buka **Actions** → **Build Corporate Tax Manager APK**
+2. Download APK dari **Artifacts**
 
-Atau build via buildozer di Linux desktop:
+**Release formal (tag):**
+```bash
+git tag -a v1.1.0 -m "Corporate Tax Manager v1.1.0"
+git push origin v1.1.0
+```
+Workflow **Release Corporate Tax Manager APK** akan:
+1. Build APK
+2. Membuat GitHub Release
+3. Mengunggah file APK ke release
+
+Atau build lokal via buildozer di Linux desktop:
 
 ```bash
 cd corporate-tax-manager
@@ -60,56 +72,45 @@ buildozer android debug
 
 ```
 corporate-tax-manager/
-├── web_app.py              # Flask app (blueprint architecture)
+├── web_app.py              # Flask app
 ├── main.py                 # Kivy Android app
-├── buildozer.spec          # Konfigurasi build APK
+├── buildozer.spec          # Konfigurasi build APK (v1.1.0)
+├── CHANGELOG.md
 ├── requirements.txt
 ├── .env.example
 ├── data/
 │   ├── tax_calculator.py   # Semua kalkulasi pajak
 │   └── tax_db.py           # Database layer (SQLite)
 ├── templates/
-│   ├── base.html           # Layout utama (Bootstrap 5, responsive)
-│   ├── index.html          # Dashboard
-│   ├── calculator.html     # Kalkulator (tab-based, 6 jenis)
-│   ├── withholding.html    # Log PPh 23/26 (CRUD + filter + export)
-│   ├── documents.html      # Manajemen dokumen
-│   └── calendar.html       # Kalender deadline
+│   ├── base.html
+│   ├── index.html
+│   ├── calculator.html
+│   ├── withholding.html
+│   ├── pph21.html
+│   ├── period_report.html
+│   ├── documents.html
+│   ├── calendar.html
+│   └── print_*.html        # Print-friendly previews
 ├── tests/
-│   └── test_all.py         # 48 unit/integration tests
+│   └── test_all.py
 └── .github/workflows/
-    └── build-tax-apk.yml   # GitHub Actions build APK
+    ├── build-tax-apk.yml   # Build APK on push main
+    └── release-apk.yml     # Release on tag v*
 ```
-
----
-
-## Kalkulator Pajak yang Tersedia
-
-| Kalkulator | Method | Edge Cases Tested |
-|---|---|---|
-| PPh 21 Pegawai Tetap | `pph21()` | Gaji nol, gaji < PTKP, gaji tinggi (tarif progresif maks) |
-| PPh 21 Bukan Pegawai | `pph21_non_pegawai()` | 50% norma penghitungan |
-| PPh 23 | `pph23()` | Zero amount, large amount, invalid type (default 2%) |
-| PPh 26 | `pph26()` | Dengan NPWP (→ PPh 23), tanpa NPWP |
-| PPN | `ppn()` | DPP, include PPN, berbagai tarif |
-| PPN Impor | `ppn_impor()` | Dengan bea masuk |
-| PPh Badan | `pph_badan()` | PP 23, Pasal 31E, Pasal 17 |
-| Sewa Tanah | `pph_final_sewa_tanah()` | 10% final |
-| Konstruksi | `pph_final_konstruksi()` | Kecil 2%, Menengah 3%, Lainnya 4% |
-| Pesangon | `pph_final_pesangon()` | Tarif progresif 0%/5%/15%/25% |
-| PPh 22 Impor | `pph22_impor()` | Dengan/tanpa API |
 
 ---
 
 ## Testing
 
 ```bash
-# Jalankan semua test (48 tests)
+# Jalankan semua test
 pytest tests/test_all.py -v
 
 # Test coverage
 pytest tests/test_all.py --cov=data/ --cov-report=term-missing
 ```
+
+Saat ini suite mencakup kalkulator, DB, routes web (CRUD, print, export), dan edge cases validasi.
 
 ---
 
@@ -117,9 +118,9 @@ pytest tests/test_all.py --cov=data/ --cov-report=term-missing
 
 - **Backend:** Python 3, Flask, SQLite
 - **Mobile:** Kivy + Buildozer
-- **Frontend:** Bootstrap 5, Bootstrap Icons
+- **Frontend:** Bootstrap 5, Bootstrap Icons, Inter font, neutral tokens
 - **Testing:** pytest, unittest
-- **CI/CD:** GitHub Actions (APK build)
+- **CI/CD:** GitHub Actions (APK build + tag release)
 
 ---
 
