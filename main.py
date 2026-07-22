@@ -152,43 +152,49 @@ class DashboardScreen(BaseScreen):
 
     def build_ui(self):
         now = date.today()
-        self.body.add_widget(make_label(f'Ringkasan {now.year}', 16, NAVY, True, 'left', 28))
+        self.body.add_widget(make_label(f'Ringkasan {now.month:02d}/{now.year}', 16, TEXT, True, 'left', 28))
 
-        total_month = total_year = doc_count = 0
+        total_month = total_year = doc_count = pph21_month = 0.0
         try:
-            data = TaxDB().get_dashboard_data()
+            data = TaxDB().get_dashboard_data(year=now.year, month=now.month)
             total_month = float(data.get('total_due_this_month', 0) or 0)
             total_year = float(data.get('total_year', 0) or 0)
             doc_count = int(data.get('doc_count', 0) or 0)
+            pph21_month = float(data.get('total_pph21_month', 0) or 0)
         except Exception:
             pass
 
         grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(140))
         for title, value in [
-            ('PPh 23/26 Bulan', f'Rp {total_month:,.0f}'),
+            ('Total PPh Bulan', f'Rp {total_month:,.0f}'),
             ('Total Tahun', f'Rp {total_year:,.0f}'),
+            ('PPh 21 Bulan', f'Rp {pph21_month:,.0f}'),
             ('Dokumen', str(doc_count)),
-            ('Status PPN', 'Dilaporkan' if now.day >= 10 else 'Menunggu'),
         ]:
             card = BoxLayout(orientation='vertical', padding=[dp(10), dp(8)], spacing=dp(2), size_hint_y=None, height=dp(64))
             paint_card(card)
             card.add_widget(make_label(title, 11, SUBTLE, False, 'center', 18))
-            card.add_widget(make_label(value, 15, NAVY, True, 'center', 24))
+            card.add_widget(make_label(value, 15, TEXT, True, 'center', 24))
             grid.add_widget(card)
         self.body.add_widget(grid)
 
-        self.body.add_widget(make_label('Deadline Mendatang', 16, NAVY, True, 'left', 28))
-        for day_num, name in [(10, 'SPT Masa PPN'), (15, 'PPh Final'), (20, 'PPh 21/23'), (21, 'PPh 26')]:
-            try:
-                dl = date(now.year, now.month, day_num)
-                diff = (dl - now).days
-            except ValueError:
-                diff = 0
-            status = 'LEWAT' if diff < 0 else ('SEGERA' if diff <= 7 else 'OK')
-            color = ERROR if diff < 0 else (WARNING if diff <= 7 else GREEN)
+        report_btn = make_button('Laporan Periode', PRIMARY, WHITE, 40)
+        report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
+        self.body.add_widget(report_btn)
+
+        self.body.add_widget(make_label('Deadline Mendatang', 16, TEXT, True, 'left', 28))
+        try:
+            deadlines = TaxDB().get_upcoming_deadlines(days_ahead=45)
+        except Exception:
+            deadlines = []
+        if not deadlines:
+            self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'left', 28))
+        for item in deadlines[:6]:
+            status = item.get('status', 'OK')
+            color = ERROR if status == 'LEWAT' else (WARNING if status == 'SEGERA' else GREEN)
             row = BoxLayout(size_hint_y=None, height=dp(44), padding=[dp(10), dp(6)], spacing=dp(8))
             paint_card(row)
-            row.add_widget(make_label(name, 13, NAVY, True, 'left'))
+            row.add_widget(make_label(str(item.get('title') or '-'), 13, TEXT, True, 'left'))
             row.add_widget(Widget())
             row.add_widget(make_label(status, 12, color, True, 'right'))
             self.body.add_widget(row)
@@ -998,6 +1004,94 @@ class CalendarScreen(BaseScreen):
 
 
 # ═══════════════════════════════════════════════════════════
+# PERIOD REPORT (Android)
+# ═══════════════════════════════════════════════════════════
+class ReportScreen(BaseScreen):
+    def __init__(self, **kwargs):
+        super().__init__('report', 'Laporan Periode', **kwargs)
+        self.view_year = date.today().year
+        self.view_month = date.today().month
+
+    def build_ui(self):
+        nav = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(6))
+        prev_btn = make_button('<', SURFACE_MUTED, TEXT, 36)
+        prev_btn.size_hint_x = None
+        prev_btn.width = dp(44)
+        prev_btn.bind(on_release=lambda _b: self.shift_period(-1))
+        next_btn = make_button('>', SURFACE_MUTED, TEXT, 36)
+        next_btn.size_hint_x = None
+        next_btn.width = dp(44)
+        next_btn.bind(on_release=lambda _b: self.shift_period(1))
+        nav.add_widget(prev_btn)
+        nav.add_widget(make_label(
+            f'{self.view_month:02d}/{self.view_year}', 15, TEXT, True, 'center', 36,
+        ))
+        nav.add_widget(next_btn)
+        self.body.add_widget(nav)
+
+        try:
+            summary = TaxDB().get_summary_by_period(self.view_year, self.view_month)
+        except Exception as exc:
+            self.body.add_widget(make_label(f'Error: {exc}', 12, ERROR, False, 'left', 50))
+            return
+
+        stats = BoxLayout(orientation='vertical', spacing=dp(6), size_hint_y=None)
+        stats.bind(minimum_height=stats.setter('height'))
+        for title, value in [
+            ('Total PPh', f"Rp {float(summary.get('grand_total') or 0):,.0f}"),
+            ('PPh 23/26/Final', f"Rp {float(summary.get('withholding_total') or 0):,.0f}"),
+            ('PPh 21', f"Rp {float(summary.get('pph21_total') or 0):,.0f}"),
+            ('Transaksi', str(summary.get('transaction_count') or 0)),
+        ]:
+            row = BoxLayout(size_hint_y=None, height=dp(42), padding=[dp(10), dp(6)])
+            paint_card(row)
+            row.add_widget(make_label(title, 12, SUBTLE, False, 'left', 30))
+            row.add_widget(make_label(value, 13, TEXT, True, 'right', 30))
+            stats.add_widget(row)
+        self.body.add_widget(stats)
+
+        self.body.add_widget(make_label('Rincian', 14, TEXT, True, 'left', 26))
+        details = summary.get('details') or []
+        if not details:
+            self.body.add_widget(make_label('Belum ada data periode ini', 12, SUBTLE, False, 'left', 30))
+            return
+
+        labels = {
+            'pph23': 'PPh 23', 'pph26': 'PPh 26',
+            'pph_final': 'PPh Final', 'pph21': 'PPh 21',
+        }
+        for d in details:
+            code = labels.get(d.get('tax_code'), d.get('tax_code') or '-')
+            card = BoxLayout(
+                orientation='vertical', size_hint_y=None, height=dp(62),
+                padding=[dp(10), dp(6)], spacing=dp(2),
+            )
+            paint_card(card)
+            card.add_widget(make_label(
+                f"{code} · {d.get('obj_type') or '-'} · {d.get('count') or 0}x",
+                12, TEXT, True, 'left', 22,
+            ))
+            card.add_widget(make_label(
+                f"PPh Rp {float(d.get('total_tax') or 0):,.0f}",
+                12, ERROR, False, 'left', 20,
+            ))
+            self.body.add_widget(card)
+
+    def shift_period(self, delta):
+        m = self.view_month + delta
+        y = self.view_year
+        if m < 1:
+            m = 12
+            y -= 1
+        elif m > 12:
+            m = 1
+            y += 1
+        self.view_month = m
+        self.view_year = y
+        self.on_enter()
+
+
+# ═══════════════════════════════════════════════════════════
 # ERROR FALLBACK SCREEN
 # ═══════════════════════════════════════════════════════════
 class ErrorScreen(Screen):
@@ -1021,6 +1115,7 @@ class RootLayout(BoxLayout):
         self.sm.add_widget(CalculatorScreen())
         self.sm.add_widget(WithholdingScreen())
         self.sm.add_widget(Pph21Screen())
+        self.sm.add_widget(ReportScreen())
         self.sm.add_widget(DocumentsScreen())
         self.sm.add_widget(CalendarScreen())
         self.add_widget(self.sm)

@@ -381,6 +381,37 @@ def create_app(testing=False):
             headers={'Content-Disposition': 'attachment;filename=pph21_export.csv'},
         )
 
+    @app.route('/pph21/print')
+    def print_pph21():
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        q = (request.args.get('q') or '').strip() or None
+        records, total = g.db.get_pph21_log(
+            limit=10000, offset=0, year=year, month=month, q=q,
+        )
+        bruto_total = sum(float(r.get('gross_salary') or 0) for r in records)
+        pph_total = sum(float(r.get('pph21_amount') or 0) for r in records)
+        filter_bits = []
+        if year:
+            filter_bits.append(f'Tahun {year}')
+        if month:
+            filter_bits.append(f'Bulan {month}')
+        if q:
+            filter_bits.append(f'Cari: {q}')
+        filter_summary = ' · '.join(filter_bits) if filter_bits else 'Semua periode'
+        return render_template(
+            'print_pph21.html',
+            records=records,
+            total=total,
+            bruto_total=bruto_total,
+            pph_total=pph_total,
+            year=year,
+            month=month,
+            q=q or '',
+            filter_summary=filter_summary,
+            generated_at=datetime.now(),
+        )
+
     @app.route('/reports/period')
     def period_report():
         now = date.today()

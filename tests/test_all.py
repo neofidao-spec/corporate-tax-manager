@@ -592,6 +592,20 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'text/csv', r.content_type.encode() if isinstance(r.content_type, str) else r.headers.get('Content-Type', '').encode())
         self.assertIn(b'Export Pegawai', r.data)
 
+    def test_pph21_print_preview(self):
+        self.client.post('/pph21/add', data={
+            'employee_name': 'Print Pegawai',
+            'gross_salary': 12000000,
+            'ptkp_status': 'K1',
+            'year': 2026,
+            'month': 7,
+        }, follow_redirects=True)
+        r = self.client.get('/pph21/print?year=2026&month=7')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Laporan Log PPh 21', r.data)
+        self.assertIn(b'Print Pegawai', r.data)
+        self.assertIn(b'window.print', r.data)
+
     def test_period_report_page(self):
         r = self.client.get('/reports/period?year=2026&month=7')
         self.assertEqual(r.status_code, 200)

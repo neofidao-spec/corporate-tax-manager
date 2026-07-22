@@ -12,6 +12,10 @@
         {% if month %}{% set _ = qs.append('month=' ~ month) %}{% endif %}
         {% if q %}{% set _ = qs.append('q=' ~ q) %}{% endif %}
         {% set filter_qs = qs|join('&') %}
+        <a href="/pph21/print{% if filter_qs %}?{{ filter_qs }}{% endif %}"
+           class="btn btn-outline-copper" target="_blank">
+            <i class="bi bi-printer"></i> Preview cetak
+        </a>
         <a href="/pph21/export{% if filter_qs %}?{{ filter_qs }}{% endif %}" class="btn btn-outline-copper">
             <i class="bi bi-download"></i> Export CSV
         </a>
