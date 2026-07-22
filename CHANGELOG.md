@@ -5,6 +5,20 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.1.2] — 2026-07-22
+
+### Added
+- Skip-link, landmark `<main>`, `aria-current`, `aria-busy`, flash region `aria-live`
+- Token kontras status: `--success-text`, `--warning-text`, `--danger-text`, `--info-text`
+- `status-chip` (ok / soon / overdue) untuk deadline dashboard
+
+### Changed
+- Badge/alert soft-bg memakai teks lebih gelap + border (baca lebih jelas)
+- Alert body text gelap + strip kiri berwarna
+- Android status colors diselaraskan ke token lebih gelap
+- `prefers-reduced-motion` menonaktifkan animasi skeleton
+- `buildozer.spec` / footer version → `1.1.2`
+
 ## [1.1.1] — 2026-07-22
 
 ### Added

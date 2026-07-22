@@ -708,7 +708,7 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'is-loading', r.data)
         self.assertIn(b'ctm_density', r.data)
         self.assertIn(b'app-content-ready', r.data)
-        self.assertIn(b'v1.1.1', r.data)
+        self.assertIn(b'v1.1.2', r.data)
 
     def test_accessibility_landmarks(self):
         r = self.client.get('/')
@@ -755,7 +755,7 @@ class TestWebApp(unittest.TestCase):
             nested = os.path.join(td, 'nested', 'ctm_prefs.json')
             self.assertTrue(save_prefs({'x': 1}, path=nested))
             self.assertEqual(load_prefs(path=nested).get('x'), 1)
-        self.assertEqual(APP_VERSION, '1.1.1')
+        self.assertEqual(APP_VERSION, '1.1.2')
 
 
 if __name__ == '__main__':
