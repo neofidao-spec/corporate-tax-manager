@@ -24,6 +24,7 @@ from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.utils import get_color_from_hex as hex2rgb
 from kivy.metrics import dp, sp
+from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle
 
 from data.tax_calculator import TaxCalculator
@@ -493,6 +494,27 @@ class CalculatorScreen(BaseScreen):
 
 
 # ═══════════════════════════════════════════════════════════
+# TOAST — Lightweight feedback (auto-dismiss)
+# ═══════════════════════════════════════════════════════════
+def show_toast(msg, duration=2.0, color=TEXT):
+    """Show a lightweight auto-dismiss banner at the top of the app.
+    Falls back to a small Popup if app root is unavailable."""
+    try:
+        root = App.get_running_app().root
+        if hasattr(root, 'show_toast'):
+            root.show_toast(msg, duration, color)
+            return
+    except Exception:
+        pass
+    # Fallback popup for safety
+    content = BoxLayout(padding=dp(12))
+    content.add_widget(make_label(str(msg)[:120], 12, color, False, 'center', 50))
+    p = Popup(title='', content=content, size_hint=(0.88, 0.22), separator_height=0)
+    p.open()
+    Clock.schedule_once(lambda _dt: p.dismiss(), duration)
+
+
+# ═══════════════════════════════════════════════════════════
 # WITHHOLDING LOG
 # ═══════════════════════════════════════════════════════════
 def _android_export_dir():
@@ -564,7 +586,10 @@ class WithholdingScreen(BaseScreen):
             return
 
         if not rows:
-            self.body.add_widget(make_label('Belum ada transaksi', 14, SUBTLE, False, 'center', 80))
+            icon = make_label('📋', 24, SUBTLE, False, 'center', 40)
+            icon.halign = 'center'
+            self.body.add_widget(icon)
+            self.body.add_widget(make_label('Belum ada transaksi', 14, SUBTLE, False, 'center', 50))
             return
 
         self.body.add_widget(make_label(f'{total} transaksi', 12, SUBTLE, False, 'left', 20))
@@ -665,7 +690,10 @@ class Pph21Screen(BaseScreen):
             12, SUBTLE, False, 'left', 22,
         ))
         if not rows:
-            self.body.add_widget(make_label('Belum ada data PPh 21', 14, SUBTLE, False, 'center', 80))
+            icon = make_label('👤', 24, SUBTLE, False, 'center', 40)
+            icon.halign = 'center'
+            self.body.add_widget(icon)
+            self.body.add_widget(make_label('Belum ada data PPh 21', 14, SUBTLE, False, 'center', 50))
             return
 
         for row in rows:
@@ -806,7 +834,10 @@ class DocumentsScreen(BaseScreen):
 
         if not docs:
             msg = 'Tidak ada hasil pencarian' if self.search_query.strip() else 'Belum ada dokumen'
-            self.body.add_widget(make_label(msg, 14, SUBTLE, False, 'center', 80))
+            icon = make_label('📁', 24, SUBTLE, False, 'center', 40)
+            icon.halign = 'center'
+            self.body.add_widget(icon)
+            self.body.add_widget(make_label(msg, 14, SUBTLE, False, 'center', 50))
             return
 
         label = f'{total} dokumen'
@@ -1035,7 +1066,8 @@ class CalendarScreen(BaseScreen):
 
         self.body.add_widget(make_label('Deadline (bisa diedit)', 13, TEXT, True, 'left', 24))
         if not reminders:
-            self.body.add_widget(make_label('Belum ada deadline custom', 12, SUBTLE, False, 'left', 28))
+            self.body.add_widget(make_label('🗓', 24, SUBTLE, False, 'center', 40))
+            self.body.add_widget(make_label('Belum ada deadline custom', 12, SUBTLE, False, 'center', 50))
         for rem in reminders:
             row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(6), padding=[dp(8), dp(4)])
             paint_card(row)
@@ -1248,7 +1280,8 @@ class ReportScreen(BaseScreen):
         self.body.add_widget(section_label('Rincian'))
         details = summary.get('details') or []
         if not details:
-            self.body.add_widget(make_label('Belum ada data periode ini', 12, SUBTLE, False, 'left', 30))
+            self.body.add_widget(make_label('📊', 24, SUBTLE, False, 'center', 40))
+            self.body.add_widget(make_label('Belum ada data periode ini', 12, SUBTLE, False, 'center', 50))
             return
 
         labels = {
@@ -1355,6 +1388,18 @@ class RootLayout(BoxLayout):
             nav.add_widget(button)
             self.nav_buttons[screen_name] = button
         self.add_widget(nav)
+
+    def show_toast(self, msg, duration=2.0, color=TEXT):
+        """Lightweight overlay banner that auto-dismisses."""
+        toast = BoxLayout(
+            size_hint_y=None, height=dp(38),
+            padding=[dp(10), dp(6)],
+            pos_hint={'top': 1.0},
+        )
+        paint_bar(toast, SURFACE)
+        toast.add_widget(make_label(str(msg)[:120], 12, color, False, 'left', 28))
+        self.add_widget(toast)
+        Clock.schedule_once(lambda _dt: self.remove_widget(toast), duration)
 
     def goto(self, screen_name):
         self.sm.current = screen_name
