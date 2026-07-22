@@ -30,21 +30,33 @@ from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
 
 # ═══════════════════════════════════════════════════════════
-# THEME — Old Money
+# THEME — Neutral (eye-friendly, matches web)
 # ═══════════════════════════════════════════════════════════
-NAVY = hex2rgb('#1B2A4A')
-CHARCOAL = hex2rgb('#2C3E50')
-CREAM = hex2rgb('#F5F0E8')
-CREAM_D = hex2rgb('#E8E0D0')
-COPPER = hex2rgb('#B87333')
+BG = hex2rgb('#F4F6F8')
+SURFACE = hex2rgb('#FFFFFF')
+SURFACE_MUTED = hex2rgb('#EEF1F4')
+PRIMARY = hex2rgb('#3B4F6A')
+PRIMARY_HOVER = hex2rgb('#32445C')
+ACCENT = hex2rgb('#4A6FA5')
+TEXT = hex2rgb('#1F2937')
+TEXT_SECONDARY = hex2rgb('#4B5563')
+SUBTLE = hex2rgb('#6B7280')
 WHITE = (1, 1, 1, 1)
-PAPER = (0.96, 0.94, 0.91, 1)
-SUBTLE = hex2rgb('#6B7B8D')
-ERROR = hex2rgb('#C0392B')
-GREEN = hex2rgb('#276B47')
+ERROR = hex2rgb('#B42318')
+GREEN = hex2rgb('#2F7D57')
+WARNING = hex2rgb('#B7791F')
+BORDER = hex2rgb('#E2E8F0')
+
+# Backward-compatible aliases used in screens
+NAVY = PRIMARY
+CHARCOAL = TEXT_SECONDARY
+CREAM = BG
+CREAM_D = SURFACE_MUTED
+COPPER = ACCENT
+PAPER = SURFACE
 
 
-def make_label(text, size=14, color=NAVY, bold=False, halign='left', height=None):
+def make_label(text, size=14, color=TEXT, bold=False, halign='left', height=None):
     widget = Label(
         text=str(text),
         font_size=sp(size),
@@ -59,7 +71,7 @@ def make_label(text, size=14, color=NAVY, bold=False, halign='left', height=None
     return widget
 
 
-def make_button(text, bg=COPPER, fg=WHITE, height=44):
+def make_button(text, bg=PRIMARY, fg=WHITE, height=44):
     return Button(
         text=text,
         size_hint_y=None,
@@ -75,8 +87,8 @@ def make_button(text, bg=COPPER, fg=WHITE, height=44):
 def paint_card(widget):
     widget.canvas.before.clear()
     with widget.canvas.before:
-        Color(*WHITE)
-        widget._card_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(8)])
+        Color(*SURFACE)
+        widget._card_bg = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(10)])
     widget.bind(
         pos=lambda w, _v: setattr(w._card_bg, 'pos', w.pos),
         size=lambda w, _v: setattr(w._card_bg, 'size', w.size),
@@ -103,8 +115,8 @@ class BaseScreen(Screen):
         root = BoxLayout(orientation='vertical')
 
         header = BoxLayout(size_hint_y=None, height=dp(52), padding=[dp(12), dp(4)])
-        paint_bar(header, NAVY)
-        header.add_widget(make_label(title_text, 17, PAPER, True, 'left'))
+        paint_bar(header, SURFACE)
+        header.add_widget(make_label(title_text, 17, TEXT, True, 'left'))
         root.add_widget(header)
 
         self.scroll = ScrollView(do_scroll_x=False)
@@ -172,7 +184,7 @@ class DashboardScreen(BaseScreen):
             except ValueError:
                 diff = 0
             status = 'LEWAT' if diff < 0 else ('SEGERA' if diff <= 7 else 'OK')
-            color = ERROR if diff < 0 else (COPPER if diff <= 7 else GREEN)
+            color = ERROR if diff < 0 else (WARNING if diff <= 7 else GREEN)
             row = BoxLayout(size_hint_y=None, height=dp(44), padding=[dp(10), dp(6)], spacing=dp(8))
             paint_card(row)
             row.add_widget(make_label(name, 13, NAVY, True, 'left'))
@@ -196,8 +208,8 @@ class CalculatorScreen(BaseScreen):
         for idx, name in enumerate(['PPh 21', 'PPh 23', 'PPN', 'Badan']):
             button = make_button(
                 name,
-                NAVY if idx == self.active_tab else CREAM_D,
-                PAPER if idx == self.active_tab else NAVY,
+                PRIMARY if idx == self.active_tab else SURFACE_MUTED,
+                WHITE if idx == self.active_tab else TEXT,
                 height=36,
             )
             button.bind(on_release=lambda _b, i=idx: self.switch_tab(i))
@@ -216,8 +228,9 @@ class CalculatorScreen(BaseScreen):
     def switch_tab(self, idx):
         self.active_tab = idx
         for i, button in self.tab_buttons.items():
-            button.background_color = NAVY if i == idx else CREAM_D
-            button.color = PAPER if i == idx else NAVY
+            selected = i == idx
+            button.background_color = PRIMARY if selected else SURFACE_MUTED
+            button.color = WHITE if selected else TEXT
         self.input_box.clear_widgets()
         self.result_label.text = ''
         self.load_tab(idx)
@@ -231,8 +244,8 @@ class CalculatorScreen(BaseScreen):
             size_hint_y=None,
             height=dp(38),
             background_color=WHITE,
-            foreground_color=NAVY,
-            cursor_color=COPPER,
+            foreground_color=TEXT,
+            cursor_color=ACCENT,
             padding=[dp(8), dp(8)],
         )
         self.input_box.add_widget(field)
@@ -247,7 +260,7 @@ class CalculatorScreen(BaseScreen):
             height=dp(38),
             background_normal='',
             background_color=WHITE,
-            color=NAVY,
+            color=TEXT,
         )
         self.input_box.add_widget(spinner)
         return spinner
@@ -395,9 +408,9 @@ class WithholdingScreen(BaseScreen):
                 err.open()
 
         actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
-        save_btn = make_button('Simpan', COPPER, WHITE, 36)
+        save_btn = make_button('Simpan', PRIMARY, WHITE, 36)
         save_btn.bind(on_release=save)
-        cancel_btn = make_button('Batal', CHARCOAL, WHITE, 36)
+        cancel_btn = make_button('Batal', SURFACE_MUTED, TEXT, 36)
         cancel_btn.bind(on_release=lambda _b: popup.dismiss())
         actions.add_widget(save_btn)
         actions.add_widget(cancel_btn)
@@ -436,7 +449,7 @@ class CalendarScreen(BaseScreen):
                     text = f'{day_num}\n{deadlines[day_num]}'
                     color = ERROR if day_num < now.day else GREEN
                 elif day_num == now.day:
-                    color = COPPER
+                    color = ACCENT
                 grid.add_widget(make_label(text, 10, color, True, 'center', 42))
         self.body.add_widget(grid)
         self.body.add_widget(make_label('PPN tgl 10 | Final tgl 15 | PPh 21/23 tgl 20 | PPh 26 tgl 21', 11, SUBTLE, False, 'left', 28))
@@ -469,7 +482,7 @@ class RootLayout(BoxLayout):
         self.add_widget(self.sm)
 
         nav = BoxLayout(size_hint_y=None, height=dp(56), spacing=dp(2), padding=[dp(4), dp(4)])
-        paint_bar(nav, NAVY)
+        paint_bar(nav, SURFACE)
         self.nav_buttons = {}
         for screen_name, title in [
             ('dashboard', 'Beranda'),
@@ -477,7 +490,12 @@ class RootLayout(BoxLayout):
             ('withholding', 'Log'),
             ('calendar', 'Kalender'),
         ]:
-            button = make_button(title, COPPER if screen_name == 'dashboard' else CHARCOAL, WHITE, 44)
+            button = make_button(
+                title,
+                PRIMARY if screen_name == 'dashboard' else SURFACE_MUTED,
+                WHITE if screen_name == 'dashboard' else TEXT,
+                44,
+            )
             button.bind(on_release=lambda _b, n=screen_name: self.goto(n))
             nav.add_widget(button)
             self.nav_buttons[screen_name] = button
@@ -486,7 +504,9 @@ class RootLayout(BoxLayout):
     def goto(self, screen_name):
         self.sm.current = screen_name
         for name, button in self.nav_buttons.items():
-            button.background_color = COPPER if name == screen_name else CHARCOAL
+            selected = name == screen_name
+            button.background_color = PRIMARY if selected else SURFACE_MUTED
+            button.color = WHITE if selected else TEXT
 
 
 # ═══════════════════════════════════════════════════════════

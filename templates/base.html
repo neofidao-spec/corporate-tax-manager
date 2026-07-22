@@ -408,6 +408,18 @@
             gap: 0.15rem;
             flex-wrap: wrap;
         }
+        .nav-tabs-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.25rem;
+        }
+        .nav-tabs-scroll .nav-tabs {
+            flex-wrap: nowrap;
+            border-bottom: none;
+            min-width: max-content;
+        }
         .nav-tabs .nav-link {
             color: var(--text-muted);
             font-weight: 600;
@@ -417,6 +429,7 @@
             padding: 0.7rem 1rem;
             border-radius: 0;
             background: transparent;
+            white-space: nowrap;
         }
         .nav-tabs .nav-link:hover {
             color: var(--text);
@@ -429,6 +442,18 @@
             background: transparent;
         }
         .tab-content { padding-top: 1.1rem; }
+        .result-title {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.65rem;
+            font-size: 0.95rem;
+        }
+        .calc-panel {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.25rem 0 0;
+        }
 
         /* ── Empty / filter ── */
         .empty-state {
