@@ -478,15 +478,44 @@ class TestWebApp(unittest.TestCase):
             'description': 'via route',
             'tax_code': 'custom',
             'is_active': 'on',
+            'is_recurring': 'on',
             'year': 2026,
             'month': 7,
         }, follow_redirects=True)
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'Custom Route Deadline', r.data)
-        # appears on calendar grid via deadlines map / list
         r2 = self.client.get('/calendar')
         self.assertEqual(r2.status_code, 200)
         self.assertIn(b'Custom Route Deadline', r2.data)
+
+    def test_one_time_deadline(self):
+        path = '/data/data/com.termux/files/home/test_corporate_tax_onetime.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            rid = db.add_reminder(
+                'SPT Tahunan Sekali',
+                description='sekali',
+                tax_code='annual',
+                is_recurring=False,
+                is_active=True,
+                one_time_date='2026-04-30',
+            )
+            self.assertGreater(rid, 0)
+            m = db.get_calendar_deadlines_map(year=2026, month=4)
+            self.assertIn(30, m)
+            m2 = db.get_calendar_deadlines_map(year=2026, month=5)
+            self.assertNotIn(30, m2)
+            # invalid formats
+            with self.assertRaises(ValueError):
+                db.add_reminder('X', is_recurring=False, one_time_date='30-04-2026')
+            with self.assertRaises(ValueError):
+                db.add_reminder('Y', is_recurring=True, deadline_day=0)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
 
 
 if __name__ == '__main__':

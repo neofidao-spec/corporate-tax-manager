@@ -443,7 +443,7 @@ def create_app(testing=False):
         month_name = cal_mod.month_name[m]
         # User-configurable deadlines from DB (fallback empty)
         try:
-            deadlines_map = g.db.get_calendar_deadlines_map()
+            deadlines_map = g.db.get_calendar_deadlines_map(year=y, month=m)
             reminders = g.db.list_reminders(active_only=False)
         except Exception:
             deadlines_map = {10: 'PPN', 15: 'PPh Final', 20: 'PPh 21/23', 21: 'PPh 26'}
@@ -474,18 +474,21 @@ def create_app(testing=False):
     def add_calendar_reminder():
         try:
             title = request.form.get('title', '').strip()
-            day = request.form.get('deadline_day', type=int)
             description = request.form.get('description', '')
             tax_code = request.form.get('tax_code', '')
-            # Checkbox: present + on => active; missing => inactive only if form sent it off
             is_active = request.form.get('is_active') == 'on'
+            # Checkbox: only present when checked. No default 'on'.
+            is_recurring = request.form.get('is_recurring') == 'on'
+            day = request.form.get('deadline_day', type=int)
+            one_time_date = request.form.get('one_time_date', '').strip() or None
             g.db.add_reminder(
                 title=title,
-                deadline_day=day,
+                deadline_day=day if is_recurring else None,
                 description=description,
                 tax_code=tax_code,
-                is_recurring=True,
+                is_recurring=is_recurring,
                 is_active=is_active,
+                one_time_date=None if is_recurring else one_time_date,
             )
             flash('Deadline ditambahkan', 'success')
         except ValueError as e:
@@ -500,18 +503,21 @@ def create_app(testing=False):
     def edit_calendar_reminder(rid):
         try:
             title = request.form.get('title', '').strip()
-            day = request.form.get('deadline_day', type=int)
             description = request.form.get('description', '')
             tax_code = request.form.get('tax_code', '')
             is_active = request.form.get('is_active') == 'on'
+            is_recurring = request.form.get('is_recurring') == 'on'
+            day = request.form.get('deadline_day', type=int)
+            one_time_date = request.form.get('one_time_date', '').strip() or None
             ok = g.db.update_reminder(
                 rid,
                 title=title,
-                deadline_day=day,
+                deadline_day=day if is_recurring else None,
                 description=description,
                 tax_code=tax_code,
-                is_recurring=True,
+                is_recurring=is_recurring,
                 is_active=is_active,
+                one_time_date=None if is_recurring else one_time_date,
             )
             if ok:
                 flash('Deadline diperbarui', 'success')

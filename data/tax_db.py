@@ -521,18 +521,37 @@ class TaxDB:
         conn.close()
         return dict(row) if row else None
 
-    def add_reminder(self, title: str, deadline_day: int, description: str = '',
-                     tax_code: str = '', is_recurring: bool = True,
-                     is_active: bool = True) -> int:
+    def add_reminder(self, title: str, deadline_day: Optional[int] = None,
+                     description: str = '', tax_code: str = '',
+                     is_recurring: bool = True, is_active: bool = True,
+                     one_time_date: Optional[str] = None) -> int:
+        """
+        Add deadline reminder.
+        - Recurring monthly: pass deadline_day (1-31), is_recurring=True
+        - One-time: pass one_time_date 'YYYY-MM-DD', is_recurring=False
+        """
         title = (title or '').strip()
         if not title:
             raise ValueError('Judul deadline harus diisi')
-        try:
-            day = int(deadline_day)
-        except (TypeError, ValueError):
-            raise ValueError('Tanggal deadline harus angka 1-31')
-        if day < 1 or day > 31:
-            raise ValueError('Tanggal deadline harus antara 1-31')
+
+        if is_recurring:
+            try:
+                day = int(deadline_day)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                raise ValueError('Tanggal deadline harus angka 1-31')
+            if day < 1 or day > 31:
+                raise ValueError('Tanggal deadline harus antara 1-31')
+            stored = str(day)
+        else:
+            raw = (one_time_date or '').strip()
+            if not raw:
+                raise ValueError('Tanggal sekali (YYYY-MM-DD) harus diisi untuk deadline non-berulang')
+            try:
+                date.fromisoformat(raw)
+            except ValueError:
+                raise ValueError('Format tanggal sekali harus YYYY-MM-DD')
+            stored = raw
+
         conn = self._conn()
         cursor = conn.cursor()
         cursor.execute("""
@@ -542,7 +561,7 @@ class TaxDB:
         """, (
             title,
             description or '',
-            str(day),
+            stored,
             (tax_code or '').strip() or None,
             1 if is_recurring else 0,
             1 if is_active else 0,
@@ -552,18 +571,33 @@ class TaxDB:
         conn.close()
         return rid
 
-    def update_reminder(self, reminder_id: int, title: str, deadline_day: int,
+    def update_reminder(self, reminder_id: int, title: str,
+                        deadline_day: Optional[int] = None,
                         description: str = '', tax_code: str = '',
-                        is_recurring: bool = True, is_active: bool = True) -> bool:
+                        is_recurring: bool = True, is_active: bool = True,
+                        one_time_date: Optional[str] = None) -> bool:
         title = (title or '').strip()
         if not title:
             raise ValueError('Judul deadline harus diisi')
-        try:
-            day = int(deadline_day)
-        except (TypeError, ValueError):
-            raise ValueError('Tanggal deadline harus angka 1-31')
-        if day < 1 or day > 31:
-            raise ValueError('Tanggal deadline harus antara 1-31')
+
+        if is_recurring:
+            try:
+                day = int(deadline_day)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                raise ValueError('Tanggal deadline harus angka 1-31')
+            if day < 1 or day > 31:
+                raise ValueError('Tanggal deadline harus antara 1-31')
+            stored = str(day)
+        else:
+            raw = (one_time_date or '').strip()
+            if not raw:
+                raise ValueError('Tanggal sekali (YYYY-MM-DD) harus diisi untuk deadline non-berulang')
+            try:
+                date.fromisoformat(raw)
+            except ValueError:
+                raise ValueError('Format tanggal sekali harus YYYY-MM-DD')
+            stored = raw
+
         conn = self._conn()
         cursor = conn.cursor()
         cursor.execute("""
@@ -574,7 +608,7 @@ class TaxDB:
         """, (
             title,
             description or '',
-            str(day),
+            stored,
             (tax_code or '').strip() or None,
             1 if is_recurring else 0,
             1 if is_active else 0,
@@ -594,23 +628,39 @@ class TaxDB:
         conn.close()
         return deleted
 
-    def get_calendar_deadlines_map(self) -> Dict[int, str]:
-        """Map day-of-month -> short label for calendar grid (active recurring)."""
+    def get_calendar_deadlines_map(self, year: Optional[int] = None,
+                                   month: Optional[int] = None) -> Dict[int, str]:
+        """Map day-of-month -> short label for a given month grid."""
+        now = date.today()
+        year = int(year or now.year)
+        month = int(month or now.month)
         reminders = self.list_reminders(active_only=True)
         day_map: Dict[int, List[str]] = {}
         for r in reminders:
-            if not r.get('is_recurring', 1):
-                continue
-            try:
-                day = int(r.get('deadline_date') or 0)
-            except (TypeError, ValueError):
-                continue
-            if day < 1 or day > 31:
-                continue
-            label = (r.get('title') or r.get('tax_code') or f'Tgl {day}').strip()
-            # Keep short for grid cells
-            short = label if len(label) <= 14 else (label[:12] + '…')
-            day_map.setdefault(day, []).append(short)
+            label = (r.get('title') or r.get('tax_code') or 'Deadline').strip()
+            short = label if len(label) <= 14 else (label[:12] + '...')
+            is_rec = bool(r.get('is_recurring', 1))
+            raw = str(r.get('deadline_date') or '').strip()
+            if is_rec:
+                try:
+                    day = int(raw)
+                except (TypeError, ValueError):
+                    continue
+                if day < 1 or day > 31:
+                    continue
+                # only include if day exists in month
+                try:
+                    date(year, month, day)
+                except ValueError:
+                    continue
+                day_map.setdefault(day, []).append(short)
+            else:
+                try:
+                    d = date.fromisoformat(raw)
+                except ValueError:
+                    continue
+                if d.year == year and d.month == month:
+                    day_map.setdefault(d.day, []).append(short)
         return {d: ' / '.join(labels) for d, labels in sorted(day_map.items())}
 
     def get_upcoming_deadlines(self, days_ahead: int = 30) -> List[Dict]:
@@ -618,50 +668,56 @@ class TaxDB:
         today = date.today()
         conn = self._conn()
         cursor = conn.cursor()
-
-        # Get active reminders (recurring monthly day)
         cursor.execute("""
             SELECT id, title, description, deadline_date, tax_code, is_recurring
             FROM tax_reminders
             WHERE is_active = 1
-            ORDER BY CAST(deadline_date AS INTEGER)
+            ORDER BY id
         """)
         reminders = [dict(r) for r in cursor.fetchall()]
         conn.close()
 
         deadlines = []
         for r in reminders:
-            try:
-                dl_day = int(r['deadline_date'])
-            except (TypeError, ValueError):
-                continue
-            if dl_day < 1 or dl_day > 31:
-                continue
+            is_rec = bool(r.get('is_recurring', 1))
+            raw = str(r.get('deadline_date') or '').strip()
+            candidate_dates = []
 
-            # Recurring monthly: project this month + next 2 months
-            for m_offset in range(3):
-                y = today.year
-                m = today.month + m_offset
-                if m > 12:
-                    m -= 12
-                    y += 1
+            if is_rec:
                 try:
-                    dl = date(y, m, dl_day)
+                    dl_day = int(raw)
+                except (TypeError, ValueError):
+                    continue
+                if dl_day < 1 or dl_day > 31:
+                    continue
+                # Recurring monthly: this month + next 2 months
+                for m_offset in range(3):
+                    y = today.year
+                    m = today.month + m_offset
+                    if m > 12:
+                        m -= 12
+                        y += 1
+                    try:
+                        candidate_dates.append(date(y, m, dl_day))
+                    except ValueError:
+                        continue
+            else:
+                try:
+                    candidate_dates.append(date.fromisoformat(raw))
                 except ValueError:
                     continue
 
+            for dl in candidate_dates:
                 diff = (dl - today).days
                 if diff < -15:
                     continue
                 if diff > days_ahead:
                     continue
-
                 status = 'OK'
                 if diff < 0:
                     status = 'LEWAT'
                 elif diff <= 7:
                     status = 'SEGERA'
-
                 deadlines.append({
                     'id': r['id'],
                     'title': r['title'],
@@ -671,6 +727,7 @@ class TaxDB:
                     'days_left': diff,
                     'status': status,
                     'tax_code': r['tax_code'],
+                    'is_recurring': is_rec,
                 })
 
         deadlines.sort(key=lambda x: abs(x['days_left']) if x['days_left'] < 0 else x['days_left'])

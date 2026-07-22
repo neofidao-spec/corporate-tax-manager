@@ -701,10 +701,9 @@ class CalendarScreen(BaseScreen):
         month_name = calendar.month_name[now.month].upper()
         self.body.add_widget(make_label(f'{month_name} {now.year}', 16, TEXT, True, 'center', 28))
 
-        # Load user-configurable deadlines
         try:
             db = TaxDB()
-            deadlines = db.get_calendar_deadlines_map()
+            deadlines = db.get_calendar_deadlines_map(year=now.year, month=now.month)
             reminders = db.list_reminders(active_only=False)
         except Exception:
             deadlines = {10: 'PPN', 15: 'Final', 20: 'P21/23', 21: 'P26'}
@@ -726,30 +725,32 @@ class CalendarScreen(BaseScreen):
                 if day_num == 0:
                     grid.add_widget(Widget(size_hint_y=None, height=dp(42)))
                     continue
-                text = str(day_num)
+                text_day = str(day_num)
                 color = TEXT
                 if day_num in deadlines:
                     short = deadlines[day_num]
                     if len(short) > 10:
-                        short = short[:9] + '…'
-                    text = f'{day_num}\n{short}'
+                        short = short[:9] + '...'
+                    text_day = f'{day_num}\n{short}'
                     color = ERROR if day_num < now.day else GREEN
                 elif day_num == now.day:
                     color = ACCENT
-                grid.add_widget(make_label(text, 10, color, True, 'center', 42))
+                grid.add_widget(make_label(text_day, 10, color, True, 'center', 42))
         self.body.add_widget(grid)
 
-        self.body.add_widget(make_label('Deadline aktif (bisa diedit)', 13, TEXT, True, 'left', 24))
+        self.body.add_widget(make_label('Deadline (bisa diedit)', 13, TEXT, True, 'left', 24))
         if not reminders:
             self.body.add_widget(make_label('Belum ada deadline custom', 12, SUBTLE, False, 'left', 28))
         for rem in reminders:
-            row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(6), padding=[dp(8), dp(4)])
+            row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(6), padding=[dp(8), dp(4)])
             paint_card(row)
             active = bool(rem.get('is_active'))
-            label = f"tgl {rem.get('deadline_date')} · {rem.get('title')}"
+            is_rec = bool(rem.get('is_recurring', 1))
+            kind = 'berulang' if is_rec else 'sekali'
+            label = f"{rem.get('deadline_date')} · {rem.get('title')} ({kind})"
             if not active:
                 label += ' (nonaktif)'
-            row.add_widget(make_label(label, 11, TEXT if active else SUBTLE, False, 'left', 34))
+            row.add_widget(make_label(label, 11, TEXT if active else SUBTLE, False, 'left', 40))
             edit_btn = make_button('Edit', SURFACE_MUTED, TEXT, 30)
             edit_btn.size_hint_x = None
             edit_btn.width = dp(52)
@@ -766,22 +767,26 @@ class CalendarScreen(BaseScreen):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
         content.add_widget(make_label('Tambah Deadline', 15, TEXT, True, 'left', 28))
         title = TextInput(hint_text='Judul (contoh: SPT Masa PPN)', multiline=False, size_hint_y=None, height=dp(38))
-        day = TextInput(hint_text='Tanggal 1-31', text='10', multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        kind = Spinner(text='Berulang bulanan', values=['Berulang bulanan', 'Sekali saja'], size_hint_y=None, height=dp(38))
+        day = TextInput(hint_text='Hari 1-31 (jika berulang)', text='10', multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        once = TextInput(hint_text='YYYY-MM-DD (jika sekali)', multiline=False, size_hint_y=None, height=dp(38))
         code = TextInput(hint_text='Kode (ppn/pph23)', multiline=False, size_hint_y=None, height=dp(38))
         desc = TextInput(hint_text='Deskripsi (opsional)', multiline=False, size_hint_y=None, height=dp(38))
-        for w in (title, day, code, desc):
+        for w in (title, kind, day, once, code, desc):
             content.add_widget(w)
-        popup = Popup(title='Deadline', content=content, size_hint=(0.92, 0.62), auto_dismiss=False)
+        popup = Popup(title='Deadline', content=content, size_hint=(0.92, 0.72), auto_dismiss=False)
 
         def save(_btn):
             try:
+                is_rec = kind.text.startswith('Berulang')
                 TaxDB().add_reminder(
                     title=(title.text or '').strip(),
-                    deadline_day=int(day.text or 0),
+                    deadline_day=int(day.text or 0) if is_rec else None,
                     description=desc.text or '',
                     tax_code=code.text or '',
-                    is_recurring=True,
+                    is_recurring=is_rec,
                     is_active=True,
+                    one_time_date=None if is_rec else (once.text or '').strip(),
                 )
                 popup.dismiss()
                 self.on_enter()
@@ -806,8 +811,30 @@ class CalendarScreen(BaseScreen):
     def show_edit_reminder(self, rem):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))
         content.add_widget(make_label('Edit Deadline', 15, TEXT, True, 'left', 28))
+        is_rec0 = bool(rem.get('is_recurring', 1))
         title = TextInput(text=str(rem.get('title') or ''), multiline=False, size_hint_y=None, height=dp(38))
-        day = TextInput(text=str(rem.get('deadline_date') or ''), multiline=False, input_filter='int', size_hint_y=None, height=dp(38))
+        kind = Spinner(
+            text='Berulang bulanan' if is_rec0 else 'Sekali saja',
+            values=['Berulang bulanan', 'Sekali saja'],
+            size_hint_y=None,
+            height=dp(38),
+        )
+        raw = str(rem.get('deadline_date') or '')
+        day = TextInput(
+            text=raw if is_rec0 else '10',
+            hint_text='Hari 1-31',
+            multiline=False,
+            input_filter='int',
+            size_hint_y=None,
+            height=dp(38),
+        )
+        once = TextInput(
+            text='' if is_rec0 else raw,
+            hint_text='YYYY-MM-DD',
+            multiline=False,
+            size_hint_y=None,
+            height=dp(38),
+        )
         code = TextInput(text=str(rem.get('tax_code') or ''), multiline=False, size_hint_y=None, height=dp(38))
         desc = TextInput(text=str(rem.get('description') or ''), multiline=False, size_hint_y=None, height=dp(38))
         active_spin = Spinner(
@@ -816,20 +843,22 @@ class CalendarScreen(BaseScreen):
             size_hint_y=None,
             height=dp(38),
         )
-        for w in (title, day, code, desc, active_spin):
+        for w in (title, kind, day, once, code, desc, active_spin):
             content.add_widget(w)
-        popup = Popup(title='Edit Deadline', content=content, size_hint=(0.92, 0.7), auto_dismiss=False)
+        popup = Popup(title='Edit Deadline', content=content, size_hint=(0.92, 0.78), auto_dismiss=False)
 
         def save(_btn):
             try:
+                is_rec = kind.text.startswith('Berulang')
                 TaxDB().update_reminder(
                     int(rem['id']),
                     title=(title.text or '').strip(),
-                    deadline_day=int(day.text or 0),
+                    deadline_day=int(day.text or 0) if is_rec else None,
                     description=desc.text or '',
                     tax_code=code.text or '',
-                    is_recurring=True,
+                    is_recurring=is_rec,
                     is_active=(active_spin.text == 'Aktif'),
+                    one_time_date=None if is_rec else (once.text or '').strip(),
                 )
                 popup.dismiss()
                 self.on_enter()
