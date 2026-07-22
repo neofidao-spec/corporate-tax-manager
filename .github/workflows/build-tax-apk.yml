@@ -1,0 +1,54 @@
+name: Build Corporate Tax Manager APK
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [main]
+    paths:
+      - 'corporate-tax-manager/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: corporate-tax-manager
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libgmp-dev libmpfr-dev libmpc-dev \
+            autoconf automake libtool pkg-config \
+            ccache zlib1g-dev libltdl-dev
+
+      - name: Cache Buildozer
+        id: cache-buildozer
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-${{ runner.os }}-v1
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools
+          pip install buildozer cython
+
+      - name: Build APK
+        run: |
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CorporateTaxManager-APK
+          path: corporate-tax-manager/bin/*.apk
