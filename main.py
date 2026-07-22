@@ -126,7 +126,7 @@ def make_label(text, size=14, color=None, bold=False, halign='left', height=None
 
 
 def make_button(text, bg=None, fg=None, height=42):
-    return Button(
+    btn = Button(
         text=text,
         size_hint_y=None,
         height=dp(height),
@@ -136,6 +136,13 @@ def make_button(text, bg=None, fg=None, height=42):
         font_size=sp(12.5),
         bold=True,
     )
+    # Auto-set accessibility
+    desc = text.replace('✕', 'Hapus ').replace('<', 'Sebelumnya').replace('>', 'Selanjutnya')
+    try:
+        btn.description_for_accessibility = desc
+    except Exception:
+        pass
+    return btn
 
 
 def paint_card(widget):
@@ -168,13 +175,19 @@ def section_label(text):
     return make_label(text.upper(), 11, SUBTLE, True, 'left', 22)
 
 
-def accessible(widget, description):
+def accessible(widget, description, tag=True):
     """Set accessibility description for TalkBack on Android."""
     try:
         widget.description_for_accessibility = description
     except Exception:
         pass
     return widget
+
+
+def accessible_input(widget, label):
+    """Set accessibility on a TextInput/Spinner."""
+    return accessible(widget, label)
+
 
 
 # ═══════════════════════════════════════════════════════════
@@ -742,8 +755,11 @@ class WithholdingScreen(BaseScreen):
 class Pph21Screen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__('pph21', 'Log PPh 21', **kwargs)
+        self.filter_year = date.today().year
+        self.filter_month = 0  # 0 = all months
 
     def build_ui(self):
+        now = date.today()
         actions = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
         add_btn = make_button('+ Tambah', PRIMARY, WHITE, 40)
         add_btn.bind(on_release=lambda _b: self.show_add_popup())
@@ -753,15 +769,52 @@ class Pph21Screen(BaseScreen):
         actions.add_widget(export_btn)
         self.body.add_widget(actions)
 
+        # Year/month filter parity with web
+        filter_row = BoxLayout(size_hint_y=None, height=dp(38), spacing=dp(6), padding=[dp(0), dp(4)])
+        yr = Spinner(
+            text=str(self.filter_year),
+            values=[str(y) for y in range(2020, now.year + 2)],
+            size_hint_y=None, height=dp(36),
+        )
+        yr.bind(text=lambda _s, _v: self._apply_filter(int(yr.text), self.filter_month))
+        filter_row.add_widget(yr)
+        mon = Spinner(
+            text='Semua bulan' if self.filter_month == 0 else f'{self.filter_month:02d}',
+            values=['Semua bulan'] + [f'{m:02d}' for m in range(1, 13)],
+            size_hint_y=None, height=dp(36),
+        )
+        mon.bind(text=lambda _s, _v: self._apply_filter(
+            self.filter_year,
+            0 if mon.text == 'Semua bulan' else int(mon.text.split(':')[0] if ':' in mon.text else mon.text),
+        ))
+        filter_row.add_widget(mon)
+        self.body.add_widget(filter_row)
+
+        self._apply_filter(self.filter_year, self.filter_month)
+
+    def _apply_filter(self, year, month):
+        self.filter_year = year
+        self.filter_month = month
+        # Clear existing list items (keep actions + filter row)
+        # Rebuild body below filter
+        self.body.clear_widgets()
+        # Re-add actions + filter (they get rebuilt by build_ui, so call build_ui tail)
+        self.build_ui_tail(year, month)
+
+    def build_ui_tail(self, year, month):
         try:
-            rows, total = TaxDB().get_pph21_log(limit=50)
-            year_total = TaxDB().get_total_pph21(date.today().year)
+            rows, total = TaxDB().get_pph21_log(year=year if month else None, month=month or None, limit=50)
+            year_total = TaxDB().get_total_pph21(year)
         except Exception as exc:
             self.body.add_widget(make_label(f'Error DB: {exc}', 12, ERROR, False, 'left', 50))
             return
 
+        if month:
+            filter_desc = f'{month:02d}/{year}'
+        else:
+            filter_desc = f'tahun {year}'
         self.body.add_widget(make_label(
-            f'{total} data · total {date.today().year}: Rp {year_total:,.0f}',
+            f'{total} data · {filter_desc} · total tahun: Rp {year_total:,.0f}',
             12, SUBTLE, False, 'left', 22,
         ))
         if not rows:
@@ -795,7 +848,7 @@ class Pph21Screen(BaseScreen):
                         except Exception:
                             pass
                         confirm.dismiss()
-                        Clock.schedule_once(lambda _dt: self.on_enter())
+                        Clock.schedule_once(lambda _dt: self._apply_filter(self.filter_year, self.filter_month))
                     btn_row = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(8))
                     btn_row.add_widget(make_button('Hapus', ERROR, WHITE, 36))
                     btn_row.children[-1].bind(on_release=do_delete)

@@ -46,7 +46,17 @@ def try_android_share_file(
         intent.setAction(Intent.ACTION_SEND)
         intent.setType(mime)
         java_file = File(path)
-        uri = Uri.fromFile(java_file)
+        # Try FileProvider (Android 7+), fallback to Uri.fromFile
+        try:
+            FileProvider = autoclass_fn('android.support.v4.content.FileProvider')
+            context = activity.getApplicationContext()
+            uri = FileProvider.getUriForFile(
+                context,
+                activity.getPackageName() + '.fileprovider',
+                java_file,
+            )
+        except Exception:
+            uri = Uri.fromFile(java_file)
         intent.putExtra(Intent.EXTRA_STREAM, uri)
         intent.putExtra(Intent.EXTRA_SUBJECT, title)
         intent.putExtra(Intent.EXTRA_TEXT, build_share_message(path, title))
