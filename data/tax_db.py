@@ -426,6 +426,54 @@ class TaxDB:
         conn.close()
         return updated
 
+    def get_document(self, doc_id: int) -> Optional[Dict]:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, category, status, tax_year, tax_month,
+                   COALESCE(notes,'') as notes, created_at, file_path
+            FROM documents WHERE id = ?
+        """, (doc_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def update_document(self, doc_id: int, title: str, category: str = 'Umum',
+                        status: str = 'Lengkap', tax_year: Optional[int] = None,
+                        tax_month: Optional[int] = None, notes: str = '') -> bool:
+        title = (title or '').strip()
+        if not title:
+            raise ValueError('Nama dokumen harus diisi')
+        category = (category or 'Umum').strip() or 'Umum'
+        status = (status or 'Lengkap').strip()
+        allowed = {'Lengkap', 'Kurang', 'Arsip', 'Dalam Proses'}
+        if status not in allowed:
+            raise ValueError(f'Status tidak valid: {status}')
+        if tax_month is not None:
+            try:
+                tax_month = int(tax_month)
+            except (TypeError, ValueError):
+                raise ValueError('Bulan pajak harus angka 1-12')
+            if tax_month < 1 or tax_month > 12:
+                raise ValueError('Bulan pajak harus antara 1-12')
+        if tax_year is not None:
+            try:
+                tax_year = int(tax_year)
+            except (TypeError, ValueError):
+                raise ValueError('Tahun pajak harus angka')
+
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE documents
+            SET title = ?, category = ?, status = ?, tax_year = ?, tax_month = ?, notes = ?
+            WHERE id = ?
+        """, (title, category, status, tax_year, tax_month, notes or '', doc_id))
+        updated = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return updated
+
     def delete_document(self, doc_id: int) -> bool:
         conn = self._conn()
         cursor = conn.cursor()

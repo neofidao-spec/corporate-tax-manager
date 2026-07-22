@@ -74,6 +74,10 @@
             <div class="doc-meta">{{ d.notes[:120] }}{% if d.notes|length > 120 %}…{% endif %}</div>
             {% endif %}
             <div class="doc-actions">
+                <button type="button" class="btn btn-sm btn-outline-copper"
+                        data-bs-toggle="modal" data-bs-target="#editModal{{ d.id }}">
+                    <i class="bi bi-pencil"></i>
+                </button>
                 <form method="POST" action="/documents/{{ d.id }}/status?page={{ page }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
                       class="d-flex align-items-center gap-1">
                     <select name="status" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
@@ -88,6 +92,60 @@
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editModal{{ d.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="/documents/{{ d.id }}/edit?page={{ page }}{% if category %}&category={{ category }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit dokumen</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Nama dokumen <span class="text-danger">*</span></label>
+                                <input type="text" name="title" class="form-control" value="{{ d.title }}" required>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Kategori</label>
+                                    <select name="category" class="form-select">
+                                        {% for cat in ['Faktur Pajak','SPT Tahunan','SPT Masa','Bukti Potong','Laporan','Lainnya','Umum'] %}
+                                        <option value="{{ cat }}" {% if d.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-select">
+                                        {% for s in ['Lengkap','Kurang','Arsip','Dalam Proses'] %}
+                                        <option value="{{ s }}" {% if d.status == s %}selected{% endif %}>{{ s }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Tahun pajak</label>
+                                    <input type="number" name="tax_year" class="form-control" value="{{ d.tax_year or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Bulan pajak</label>
+                                    <input type="number" name="tax_month" class="form-control" min="1" max="12" value="{{ d.tax_month or '' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Catatan</label>
+                                    <textarea name="notes" class="form-control" rows="2">{{ d.notes or '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-copper" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-copper">Simpan perubahan</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
         {% endfor %}

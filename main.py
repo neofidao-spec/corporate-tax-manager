@@ -474,23 +474,50 @@ class WithholdingScreen(BaseScreen):
 class DocumentsScreen(BaseScreen):
     def __init__(self, **kwargs):
         super().__init__('documents', 'Dokumen Pajak', **kwargs)
+        self.search_query = ''
 
     def build_ui(self):
-        add_btn = make_button('+ Tambah Dokumen', height=44)
+        # Search row
+        search_row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(6))
+        self.search_input = TextInput(
+            text=self.search_query,
+            hint_text='Cari judul / kategori / catatan',
+            multiline=False,
+            size_hint_x=0.72,
+            size_hint_y=None,
+            height=dp(38),
+            background_color=WHITE,
+            foreground_color=TEXT,
+            cursor_color=ACCENT,
+            padding=[dp(8), dp(8)],
+        )
+        search_btn = make_button('Cari', PRIMARY, WHITE, 38)
+        search_btn.size_hint_x = 0.28
+        search_btn.bind(on_release=lambda _b: self.apply_search())
+        search_row.add_widget(self.search_input)
+        search_row.add_widget(search_btn)
+        self.body.add_widget(search_row)
+
+        add_btn = make_button('+ Tambah Dokumen', height=40)
         add_btn.bind(on_release=lambda _b: self.show_add_popup())
         self.body.add_widget(add_btn)
 
         try:
-            docs, total = TaxDB().get_all_documents(limit=50)
+            q = self.search_query.strip() or None
+            docs, total = TaxDB().get_all_documents(limit=50, q=q)
         except Exception as exc:
             self.body.add_widget(make_label(f'Error DB: {exc}', 12, ERROR, False, 'left', 50))
             return
 
         if not docs:
-            self.body.add_widget(make_label('Belum ada dokumen', 14, SUBTLE, False, 'center', 80))
+            msg = 'Tidak ada hasil pencarian' if self.search_query.strip() else 'Belum ada dokumen'
+            self.body.add_widget(make_label(msg, 14, SUBTLE, False, 'center', 80))
             return
 
-        self.body.add_widget(make_label(f'{total} dokumen', 12, SUBTLE, False, 'left', 20))
+        label = f'{total} dokumen'
+        if self.search_query.strip():
+            label += f' · filter: {self.search_query.strip()}'
+        self.body.add_widget(make_label(label, 12, SUBTLE, False, 'left', 20))
         for doc in docs:
             card = BoxLayout(
                 orientation='vertical',
@@ -509,6 +536,10 @@ class DocumentsScreen(BaseScreen):
             card.add_widget(make_label(f'{title}', 13, TEXT, True, 'left', 22))
             card.add_widget(make_label(f'{category} · {status} · {period}', 11, SUBTLE, False, 'left', 18))
             self.body.add_widget(card)
+
+    def apply_search(self):
+        self.search_query = (self.search_input.text or '').strip()
+        self.on_enter()
 
     def show_add_popup(self):
         content = BoxLayout(orientation='vertical', spacing=dp(8), padding=dp(16))

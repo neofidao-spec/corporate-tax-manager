@@ -30,6 +30,23 @@
             <i class="bi bi-cash-stack icon"></i>
             <div class="label">PPh bulan ini</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_due_this_month) }}</div>
+            {% if comparison %}
+            <div class="trend mt-1" style="font-size:0.78rem;color:
+                {% if comparison.direction == 'up' %}var(--danger)
+                {% elif comparison.direction == 'down' %}var(--success)
+                {% else %}var(--text-muted){% endif %};">
+                {% if comparison.direction == 'up' %}
+                <i class="bi bi-arrow-up-right"></i>
+                {% elif comparison.direction == 'down' %}
+                <i class="bi bi-arrow-down-right"></i>
+                {% else %}
+                <i class="bi bi-dash"></i>
+                {% endif %}
+                vs {{ month_labels[comparison.prev_month] }}:
+                Rp {{ "{:,.0f}".format(comparison.delta) }}
+                ({{ "{:+.1f}".format(comparison.delta_pct) }}%)
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-3 col-6">

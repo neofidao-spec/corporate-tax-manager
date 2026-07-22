@@ -149,15 +149,7 @@
         <div class="meta">
             Corporate Tax Manager
             &mdash;
-            {% if year or month %}
-                Periode:
-                {% if month %}{{ month }}/{% endif %}{{ year or 'Semua tahun' }}
-            {% else %}
-                Semua periode
-            {% endif %}
-            {% if tax_code %}
-                &mdash; Jenis: {{ tax_code }}
-            {% endif %}
+            Filter: <strong>{{ filter_summary }}</strong>
             <br>
             Dibuat: {{ generated_at.strftime('%d %b %Y %H:%M') }}
         </div>

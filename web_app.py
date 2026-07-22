@@ -70,6 +70,26 @@ def create_app(testing=False):
         deadlines = g.db.get_upcoming_deadlines()
         yearly = g.db.get_yearly_summary(data['year'])
 
+        # Previous month comparison
+        prev_m = month - 1 if month > 1 else 12
+        prev_y = year if month > 1 else year - 1
+        prev_data = g.db.get_dashboard_data(year=prev_y, month=prev_m)
+        curr_due = float(data.get('total_due_this_month') or 0)
+        prev_due = float(prev_data.get('total_due_this_month') or 0)
+        delta = curr_due - prev_due
+        if prev_due > 0:
+            delta_pct = (delta / prev_due) * 100
+        else:
+            delta_pct = 100.0 if curr_due > 0 else 0.0
+        comparison = {
+            'prev_year': prev_y,
+            'prev_month': prev_m,
+            'prev_due': prev_due,
+            'delta': delta,
+            'delta_pct': delta_pct,
+            'direction': 'up' if delta > 0 else ('down' if delta < 0 else 'flat'),
+        }
+
         # Aggregate monthly totals for chart (1..12)
         month_totals = {m: 0.0 for m in range(1, 13)}
         for row in yearly or []:
@@ -94,8 +114,6 @@ def create_app(testing=False):
             })
 
         # Period navigation
-        prev_m = month - 1 if month > 1 else 12
-        prev_y = year if month > 1 else year - 1
         next_m = month + 1 if month < 12 else 1
         next_y = year if month < 12 else year + 1
 
@@ -113,6 +131,7 @@ def create_app(testing=False):
             next_y=next_y,
             next_m=next_m,
             month_labels=labels,
+            comparison=comparison,
         )
 
     # ══════════════════════════════════════════════════
@@ -246,7 +265,12 @@ def create_app(testing=False):
 
     @app.route('/withholding/export')
     def export_withholding():
-        records, _ = g.db.get_all_withholding(limit=10000)
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        tax_code = request.args.get('tax_code')
+        records, _ = g.db.get_all_withholding(
+            limit=10000, year=year, month=month, tax_code=tax_code,
+        )
         output = StringIO()
         w = csv.writer(output)
         w.writerow(['ID', 'Vendor', 'Jumlah Bruto', 'Jenis Objek', 'Jenis Pajak',
@@ -331,6 +355,35 @@ def create_app(testing=False):
             q=request.args.get('q'),
         ))
 
+    @app.route('/documents/<int:did>/edit', methods=['POST'])
+    def edit_document(did):
+        try:
+            title = request.form.get('title', '').strip()
+            category = request.form.get('category', 'Umum')
+            status = request.form.get('status', 'Lengkap')
+            tax_year = request.form.get('tax_year', type=int)
+            tax_month = request.form.get('tax_month', type=int)
+            notes = request.form.get('notes', '')
+            ok = g.db.update_document(
+                did, title=title, category=category, status=status,
+                tax_year=tax_year, tax_month=tax_month, notes=notes,
+            )
+            if ok:
+                flash('Dokumen berhasil diperbarui', 'success')
+            else:
+                flash('Dokumen tidak ditemukan', 'error')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal memperbarui: {str(e)}', 'error')
+        return redirect(url_for(
+            'documents',
+            page=request.args.get('page', 1),
+            category=request.args.get('category'),
+            status=request.args.get('status'),
+            q=request.args.get('q'),
+        ))
+
     @app.route('/documents/delete/<int:did>', methods=['POST'])
     def delete_document(did):
         g.db.delete_document(did)
@@ -348,6 +401,18 @@ def create_app(testing=False):
         )
         grand_total = sum(float(r.get('pph_amount') or 0) for r in records)
         bruto_total = sum(float(r.get('amount') or 0) for r in records)
+        tax_labels = {
+            'pph23': 'PPh 23', 'pph26': 'PPh 26',
+            'pph_final': 'PPh Final', 'pph21': 'PPh 21',
+        }
+        filter_bits = []
+        if year:
+            filter_bits.append(f"Tahun {year}")
+        if month:
+            filter_bits.append(f"Bulan {month}")
+        if tax_code:
+            filter_bits.append(tax_labels.get(tax_code, tax_code))
+        filter_summary = ' · '.join(filter_bits) if filter_bits else 'Semua periode & jenis'
         return render_template(
             'print_withholding.html',
             records=records,
@@ -357,6 +422,7 @@ def create_app(testing=False):
             year=year,
             month=month,
             tax_code=tax_code,
+            filter_summary=filter_summary,
             generated_at=datetime.now(),
         )
 

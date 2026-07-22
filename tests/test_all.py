@@ -410,6 +410,42 @@ class TestWebApp(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'Laporan Potongan PPh', r.data)
 
+    def test_document_full_edit(self):
+        path = '/data/data/com.termux/files/home/test_corporate_tax_docs_edit.db'
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            db = TaxDB(path)
+            db.init_tables()
+            did = db.add_document('Judul Lama', 'Faktur Pajak', 'Kurang', 2026, 1, 'n1')
+            ok = db.update_document(
+                did, title='Judul Baru', category='SPT Masa', status='Lengkap',
+                tax_year=2026, tax_month=2, notes='n2',
+            )
+            self.assertTrue(ok)
+            doc = db.get_document(did)
+            self.assertIsNotNone(doc)
+            self.assertEqual(doc['title'], 'Judul Baru')
+            self.assertEqual(doc['category'], 'SPT Masa')
+            self.assertEqual(doc['status'], 'Lengkap')
+            self.assertEqual(doc['tax_month'], 2)
+            self.assertEqual(doc['notes'], 'n2')
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_dashboard_comparison_present(self):
+        r = self.client.get('/?year=2026&month=7')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'vs', r.data)
+
+    def test_print_filter_summary(self):
+        r = self.client.get('/withholding/print?year=2026&month=3&tax_code=pph23')
+        self.assertEqual(r.status_code, 200)
+        body = r.data
+        self.assertIn(b'Tahun 2026', body)
+        self.assertIn(b'PPh 23', body)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
