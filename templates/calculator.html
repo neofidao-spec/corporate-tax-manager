@@ -330,7 +330,7 @@
     </div>
 
     <!-- PPh Final -->
-    <div class="tab-pane fade {{ 'show active' if calc_type.startswith('pph_final') else '' }}" id="tab-final">
+    <div class="tab-pane fade {{ 'show active' if calc_type.startswith('pph_final') or calc_type == 'pph22_impor' else '' }}" id="tab-final">
         <div class="row g-3">
             <div class="col-md-4">
                 <div class="card">
@@ -344,12 +344,6 @@
                             </div>
                             <button type="submit" class="btn btn-copper w-100">Hitung 10%</button>
                         </form>
-                        {% if calc_type == 'pph_final_sewa' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
-                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -373,12 +367,6 @@
                             </div>
                             <button type="submit" class="btn btn-copper w-100">Hitung</button>
                         </form>
-                        {% if calc_type == 'pph_final_konstruksi' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
-                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -394,13 +382,6 @@
                             </div>
                             <button type="submit" class="btn btn-copper w-100">Hitung</button>
                         </form>
-                        {% if calc_type == 'pph_final_pesangon' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Nilai: <strong>Rp {{ "{:,.0f}".format(results.nilai) }}</strong></div>
-                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                            <div>Diterima: <strong>Rp {{ "{:,.0f}".format(results.diterima) }}</strong></div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -418,15 +399,6 @@
                             </div>
                             <button type="submit" class="btn btn-copper w-100">Hitung 2,5%</button>
                         </form>
-                        {% if calc_type == 'pph_final_penjualan' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
-                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                            {% if results.ppn is defined %}
-                            <div>PPN terkait: <strong>Rp {{ "{:,.0f}".format(results.ppn) }}</strong></div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -442,13 +414,6 @@
                             </div>
                             <button type="submit" class="btn btn-copper w-100">Hitung 20%</button>
                         </form>
-                        {% if calc_type == 'pph_final_bunga' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
-                            <div>PPh Final: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                            <div>Diterima: <strong>Rp {{ "{:,.0f}".format(results.diterima) }}</strong></div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -468,16 +433,50 @@
                             </div>
                             <button type="submit" class="btn btn-outline-copper w-100">Hitung</button>
                         </form>
-                        {% if calc_type == 'pph22_impor' and results %}
-                        <div class="small mt-2 p-2 bg-light rounded">
-                            <div>Tarif: <strong>{{ results.tarif }}</strong></div>
-                            <div>PPh 22: <strong>Rp {{ "{:,.0f}".format(results.pph) }}</strong></div>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Unified result box for PPh Final + PPh 22 -->
+        {% if results and (calc_type.startswith('pph_final') or calc_type == 'pph22_impor') %}
+        <div class="result-box mt-3 is-sticky">
+            <div class="result-title">
+                <i class="bi bi-check-circle me-1 text-accent"></i>
+                Hasil PPh Final
+            </div>
+            {% if calc_type == 'pph_final_sewa' %}
+            <div class="value-line"><span>Objek</span><span>Sewa Tanah/Bangunan</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total"><span>PPh Final</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            {% elif calc_type == 'pph_final_konstruksi' %}
+            <div class="value-line"><span>Objek</span><span>Jasa Konstruksi</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total"><span>PPh Final</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            {% elif calc_type == 'pph_final_pesangon' %}
+            <div class="value-line"><span>Objek</span><span>Pesangon</span></div>
+            <div class="value-line"><span>Nilai</span><span>Rp {{ "{:,.0f}".format(results.nilai) }}</span></div>
+            <div class="value-line total"><span>PPh Final</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            <div class="value-line"><span>Diterima</span><span>Rp {{ "{:,.0f}".format(results.diterima) }}</span></div>
+            {% elif calc_type == 'pph_final_penjualan' %}
+            <div class="value-line"><span>Objek</span><span>Pengalihan Tanah/Bangunan</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total"><span>PPh Final</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            {% if results.ppn is defined %}
+            <div class="value-line"><span>PPN terkait</span><span>Rp {{ "{:,.0f}".format(results.ppn) }}</span></div>
+            {% endif %}
+            {% elif calc_type == 'pph_final_bunga' %}
+            <div class="value-line"><span>Objek</span><span>Bunga Deposito</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total"><span>PPh Final</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            <div class="value-line"><span>Diterima</span><span>Rp {{ "{:,.0f}".format(results.diterima) }}</span></div>
+            {% elif calc_type == 'pph22_impor' %}
+            <div class="value-line"><span>Objek</span><span>PPh 22 Impor</span></div>
+            <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
+            <div class="value-line total"><span>PPh 22</span><span>Rp {{ "{:,.0f}".format(results.pph) }}</span></div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
 </div>
