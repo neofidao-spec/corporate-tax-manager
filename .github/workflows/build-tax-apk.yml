@@ -4,16 +4,10 @@ on:
   workflow_dispatch:  # Manual trigger
   push:
     branches: [main]
-    paths:
-      - 'corporate-tax-manager/**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: corporate-tax-manager
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CorporateTaxManager-APK
-          path: corporate-tax-manager/bin/*.apk
+          path: bin/*.apk

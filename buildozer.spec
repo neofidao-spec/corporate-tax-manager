@@ -9,13 +9,15 @@ version = 1.0.0
 requirements = python3,kivy
 orientation = portrait
 android.python_version = 3
-android.api = 31
+android.api = 34
 android.minapi = 21
+android.ndk = 26b
 android.permissions = INTERNET
 android.use_androidx = True
-android.gradle_build = True
-android.debug_mode = True
+android.accept_sdk_license = True
+android.archs = arm64-v8a
 
 [buildozer]
 
 log_level = 1
+warn_on_root = 1
