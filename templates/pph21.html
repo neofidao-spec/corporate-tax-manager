@@ -3,8 +3,9 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-        <h2>Log PPh 21</h2>
-        <div class="subtitle">Catat potongan PPh 21 pegawai &mdash; {{ total }} data</div>
+        <div class="eyebrow">Payroll · PPh 21</div>
+        <h2>Log PPh 21 pegawai</h2>
+        <div class="subtitle">Gaji bruto + PTKP — {{ total }} baris, total masa otomatis</div>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         {% set qs = [] %}
@@ -26,16 +27,27 @@
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-4 col-6">
+    <div class="col-md-5 col-12">
+        <div class="card stat-card kpi-hero h-100">
+            <div class="label">Total PPh 21 {{ year or now.year }}</div>
+            <div class="value">Rp {{ "{:,.0f}".format(year_total) }}</div>
+            <div class="small text-muted mt-2">Akumulasi potongan pegawai pada filter aktif</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
-            <div class="label">Total data</div>
+            <div class="label">Jumlah baris</div>
             <div class="value">{{ total }}</div>
         </div>
     </div>
     <div class="col-md-4 col-6">
         <div class="card stat-card h-100">
-            <div class="label">Total PPh 21 {{ year or now.year }}</div>
-            <div class="value">Rp {{ "{:,.0f}".format(year_total) }}</div>
+            <div class="label">Periode filter</div>
+            <div class="value" style="font-size:1.1rem;">
+                {% if year and month %}{{ year }}-{{ "%02d"|format(month) }}
+                {% elif year %}{{ year }}
+                {% else %}Semua{% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -69,9 +81,9 @@
                     <tr>
                         <th>#</th>
                         <th>Pegawai</th>
-                        <th>Gaji bruto</th>
+                        <th class="text-end">Gaji bruto</th>
                         <th>PTKP</th>
-                        <th>PPh 21</th>
+                        <th class="text-end">PPh 21</th>
                         <th>Periode</th>
                         <th>Input</th>
                         <th></th>
@@ -80,17 +92,26 @@
                 <tbody>
                     {% for r in records %}
                     <tr>
-                        <td>{{ r.id }}</td>
+                        <td class="text-muted">{{ r.id }}</td>
                         <td class="fw-semibold">{{ r.employee_name }}</td>
                         <td class="table-money">Rp {{ "{:,.0f}".format(r.gross_salary) }}</td>
-                        <td><span class="badge bg-secondary">{{ r.ptkp_status }}</span></td>
-                        <td class="table-money">Rp {{ "{:,.0f}".format(r.pph21_amount) }}</td>
-                        <td>{{ r.period_year }}-{{ "%02d"|format(r.period_month) }}</td>
-                        <td><small>{{ r.created_at[:10] if r.created_at else '-' }}</small></td>
+                        <td><span class="tax-chip">{{ r.ptkp_status }}</span></td>
+                        <td class="table-money">
+                            <div class="money-stack">
+                                <span class="primary">Rp {{ "{:,.0f}".format(r.pph21_amount) }}</span>
+                                {% if r.gross_salary and r.gross_salary > 0 %}
+                                <span class="secondary">{{ "{:.1f}".format((r.pph21_amount / r.gross_salary) * 100) }}% bruto</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><span class="tax-chip">{{ r.period_year }}-{{ "%02d"|format(r.period_month) }}</span></td>
+                        <td><small class="text-muted">{{ r.created_at[:10] if r.created_at else '-' }}</small></td>
                         <td>
                             <form method="POST" action="/pph21/delete/{{ r.id }}"
                                   onsubmit="return confirm('Hapus data {{ r.employee_name }}?')">
-                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" aria-label="Hapus {{ r.employee_name }}">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                </button>
                             </form>
                         </td>
                     </tr>

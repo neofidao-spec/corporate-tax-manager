@@ -242,10 +242,12 @@ class DashboardScreen(BaseScreen):
 
     def build_ui(self):
         now = date.today()
-        self.body.add_widget(section_label('Ringkasan periode'))
-        self.body.add_widget(make_label(f'{now.month:02d}/{now.year}', 18, TEXT, True, 'left', 30))
+        self.body.add_widget(section_label('Meja pajak'))
+        self.body.add_widget(make_label(f'Posisi masa {now.month:02d}/{now.year}', 17, TEXT, True, 'left', 28))
+        self.body.add_widget(make_label('Fokus: catat → rekonsiliasi → setor', 11, SUBTLE, False, 'left', 20))
 
         total_month = total_year = doc_count = pph21_month = 0.0
+        data = {}
         try:
             data = TaxDB().get_dashboard_data(year=now.year, month=now.month)
             total_month = float(data.get('total_due_this_month', 0) or 0)
@@ -278,10 +280,18 @@ class DashboardScreen(BaseScreen):
                 banner.add_widget(make_label(f'+{len(urgent) - 1} deadline lain', 11, SUBTLE, False, 'left', 16))
             self.body.add_widget(banner)
 
-        hero = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(2), size_hint_y=None, height=dp(78))
+        hero = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(2), size_hint_y=None, height=dp(118))
         paint_card(hero)
-        hero.add_widget(make_label('TOTAL PPH BULAN INI', 11, PRIMARY, True, 'left', 18))
-        hero.add_widget(make_label(f'Rp {total_month:,.0f}', 18, TEXT, True, 'left', 30))
+        hero.add_widget(make_label('KEWAJIBAN MASA · TOTAL PPH', 11, PRIMARY, True, 'left', 18))
+        hero.add_widget(make_label(f'Rp {total_month:,.0f}', 18, TEXT, True, 'left', 28))
+        try:
+            wh_month = float(data.get('total_withholding_month', 0) or 0)
+        except Exception:
+            wh_month = max(0.0, total_month - pph21_month)
+        hero.add_widget(make_label(
+            f'Potongan Rp {wh_month:,.0f}  ·  PPh 21 Rp {pph21_month:,.0f}',
+            11, SUBTLE, False, 'left', 20,
+        ))
         self.body.add_widget(hero)
 
         grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None, height=dp(148))
@@ -289,7 +299,7 @@ class DashboardScreen(BaseScreen):
             ('Total Tahun', f'Rp {total_year:,.0f}'),
             ('PPh 21 Bulan', f'Rp {pph21_month:,.0f}'),
             ('Dokumen', str(doc_count)),
-            ('Status', 'Siap lapor'),
+            ('Deadline 45 hr', f'{len(urgent)} urgent' if urgent else 'Aman'),
         ]:
             card = BoxLayout(orientation='vertical', padding=[dp(10), dp(8)], spacing=dp(2), size_hint_y=None, height=dp(68))
             paint_card(card)
@@ -298,28 +308,35 @@ class DashboardScreen(BaseScreen):
             grid.add_widget(card)
         self.body.add_widget(grid)
 
-        self.body.add_widget(section_label('Aksi cepat'))
+        self.body.add_widget(section_label('Alur masa'))
         actions = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
         report_btn = make_button('Laporan', PRIMARY, WHITE, 42)
         report_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('report'))
-        docs_btn = make_button('Dokumen', SURFACE_MUTED, TEXT, 42)
-        docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
+        wh_btn = make_button('Potongan', SURFACE_MUTED, TEXT, 42)
+        wh_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('withholding'))
+        p21_btn = make_button('PPh 21', SURFACE_MUTED, TEXT, 42)
+        p21_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('pph21'))
         dens_btn = make_button(
             'Lega' if App.get_running_app().root.compact else 'Ringkas',
             SURFACE_MUTED, TEXT, 42,
         )
         dens_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_density())
-
         dark_label = 'Terang' if THEME['is_dark'] else 'Gelap'
         dark_btn = make_button(f'{dark_label}', SURFACE_MUTED, TEXT, 42)
         dark_btn.bind(on_release=lambda _b: App.get_running_app().root.toggle_dark_mode())
+        actions.add_widget(wh_btn)
+        actions.add_widget(p21_btn)
         actions.add_widget(report_btn)
-        actions.add_widget(docs_btn)
-        actions.add_widget(dens_btn)
-        actions.add_widget(dark_btn)
         self.body.add_widget(actions)
+        tools = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
+        docs_btn = make_button('Dokumen', SURFACE_MUTED, TEXT, 42)
+        docs_btn.bind(on_release=lambda _b: App.get_running_app().root.goto('documents'))
+        tools.add_widget(docs_btn)
+        tools.add_widget(dens_btn)
+        tools.add_widget(dark_btn)
+        self.body.add_widget(tools)
 
-        self.body.add_widget(section_label('Deadline mendatang'))
+        self.body.add_widget(section_label('Deadline masa'))
         if not deadlines:
             self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'center', 28))
         for item in deadlines[:6]:

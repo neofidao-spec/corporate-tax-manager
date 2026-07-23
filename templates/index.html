@@ -3,8 +3,9 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-        <h2>Beranda</h2>
-        <div class="subtitle">Ringkasan pajak perusahaan — periode {{ month_labels[selected_month] }} {{ selected_year }}</div>
+        <div class="eyebrow">Meja Pajak · Operasional</div>
+        <h2>Posisi kewajiban masa</h2>
+        <div class="subtitle">Fokus: apa yang harus dicatat, dilapor, dan disetor untuk {{ month_labels[selected_month] }} {{ selected_year }}</div>
     </div>
     <form method="GET" class="period-toolbar d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-outline-copper btn-sm" href="/?year={{ prev_y }}&month={{ prev_m }}" title="Periode sebelumnya">
@@ -21,6 +22,14 @@
             <i class="bi bi-chevron-right"></i>
         </a>
     </form>
+</div>
+
+<div class="tax-desk-banner">
+    <div>
+        <strong>Alur masa pajak:</strong>
+        catat potongan → rekonsiliasi PPh 21 → cek deadline → export laporan
+    </div>
+    <div class="text-muted">Bukan dashboard dekoratif — hanya data yang mempengaruhi keputusan setor.</div>
 </div>
 
 {% if urgent_deadlines %}
@@ -45,48 +54,81 @@
 </div>
 {% endif %}
 
-<!-- Stat Cards: decision-first KPI hierarchy -->
+<!-- Stat Cards: decision-first tax ops hierarchy -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4 col-12">
+    <div class="col-lg-5 col-md-6 col-12">
         <div class="card stat-card kpi-hero h-100">
-            <i class="bi bi-cash-stack icon"></i>
-            <div class="label">PPh bulan ini</div>
+            <div class="label">Kewajiban PPh periode ini</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_due_this_month) }}</div>
             {% if comparison %}
             <div class="trend trend-{{ comparison.direction }}">
                 {% if comparison.direction == 'up' %}
-                <i class="bi bi-arrow-up-right"></i>
+                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
                 {% elif comparison.direction == 'down' %}
-                <i class="bi bi-arrow-down-right"></i>
+                <i class="bi bi-arrow-down-right" aria-hidden="true"></i>
                 {% else %}
-                <i class="bi bi-dash"></i>
+                <i class="bi bi-dash" aria-hidden="true"></i>
                 {% endif %}
                 vs {{ month_labels[comparison.prev_month] }}:
                 Rp {{ "{:,.0f}".format(comparison.delta) }}
                 ({{ "{:+.1f}".format(comparison.delta_pct) }}%)
             </div>
             {% endif %}
+            {% set wh = dash.total_withholding_month or 0 %}
+            {% set p21 = dash.total_pph21_month or 0 %}
+            {% set due = dash.total_due_this_month or 0 %}
+            <div class="kpi-compose">
+                <div class="kpi-compose-row">
+                    <span class="k">PPh 23/26/Final</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(wh) }}</span>
+                </div>
+                <div class="kpi-compose-row">
+                    <span class="k">PPh 21 pegawai</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(p21) }}</span>
+                </div>
+                {% if due > 0 %}
+                <div class="compose-bar" aria-hidden="true">
+                    <div class="seg-withhold" style="width: {{ (wh / due * 100)|round(1) }}%;"></div>
+                    <div class="seg-pph21" style="width: {{ (p21 / due * 100)|round(1) }}%;"></div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-    <div class="col-md-4 col-6">
+    <div class="col-lg-3 col-md-6 col-6">
         <div class="card stat-card h-100">
-            <i class="bi bi-graph-up-arrow icon"></i>
             <div class="label">Total PPh {{ dash.year }}</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_year) }}</div>
+            <div class="kpi-compose">
+                <div class="kpi-compose-row">
+                    <span class="k">Potongan</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(dash.total_withholding_year or 0) }}</span>
+                </div>
+                <div class="kpi-compose-row">
+                    <span class="k">PPh 21</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(dash.total_pph21_year or 0) }}</span>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-lg-2 col-sm-4 col-6">
+    <div class="col-lg-2 col-md-6 col-6">
         <div class="card stat-card h-100">
-            <i class="bi bi-receipt icon"></i>
-            <div class="label">Jenis transaksi</div>
-            <div class="value">{{ dash.by_type|length }}</div>
+            <div class="label">PPh 21 bulan ini</div>
+            <div class="value">Rp {{ "{:,.0f}".format(dash.total_pph21_month or 0) }}</div>
+            <div class="small text-muted mt-2">Siap rekonsiliasi payroll</div>
         </div>
     </div>
-    <div class="col-lg-2 col-sm-4 col-6">
+    <div class="col-lg-2 col-md-6 col-6">
         <div class="card stat-card h-100">
-            <i class="bi bi-file-earmark-text icon"></i>
-            <div class="label">Dokumen tercatat</div>
-            <div class="value">{{ dash.doc_count }}</div>
+            <div class="label">Deadline window</div>
+            <div class="value">{{ deadline_window }} hr</div>
+            <div class="small text-muted mt-2">
+                {% if urgent_deadlines %}
+                {{ urgent_deadlines|length }} perlu perhatian
+                {% else %}
+                Tidak ada yang urgent
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -94,9 +136,9 @@
 <div class="row g-4">
     <!-- Deadline Section -->
     <div class="col-lg-4">
-        <div class="card h-100">
+        <div class="card h-100 deadline-panel">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-bell me-2 text-muted"></i> Deadline mendatang</span>
+                <span>Deadline masa</span>
                 <div class="btn-group btn-group-sm" role="group" aria-label="Jangka waktu deadline">
                     <a href="?window=7{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}"
                        class="btn btn-sm {{ 'btn-copper' if deadline_window == 7 else 'btn-outline-copper' }}">7 hr</a>
@@ -128,7 +170,7 @@
                 <div class="empty-state compact py-4">
                     <i class="bi bi-calendar-check"></i>
                     <div class="empty-title">Tidak ada deadline dekat</div>
-                    <p class="mb-0">Tidak ada deadline dalam 30 hari ke depan.</p>
+                    <p class="mb-0">Tidak ada deadline dalam {{ deadline_window }} hari ke depan.</p>
                     <a href="/calendar" class="btn btn-outline-copper btn-sm mt-2">Kelola kalender</a>
                 </div>
                 {% endif %}
@@ -140,7 +182,7 @@
     <div class="col-lg-8">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-bar-chart-line me-2 text-muted"></i> Tren PPh {{ dash.year }}</span>
+                <span>Beban PPh {{ dash.year }} · bulanan</span>
                 {% if chart_max and chart_max > 0 %}
                 <small class="text-muted">Maks: Rp {{ "{:,.0f}".format(chart_max) }}</small>
                 {% endif %}
@@ -178,8 +220,8 @@
                             {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
                             {% for r in yearly %}
                             <tr>
-                                <td><span class="badge bg-secondary">{{ months[r.tax_month] }}</span></td>
-                                <td>{{ labels.get(r.tax_code, r.tax_code) }}</td>
+                                <td><span class="tax-chip">{{ months[r.tax_month] }}</span></td>
+                                <td><span class="tax-chip {{ r.tax_code }}">{{ labels.get(r.tax_code, r.tax_code) }}</span></td>
                                 <td>{{ r.count }}</td>
                                 <td class="table-money">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
                             </tr>
@@ -201,46 +243,52 @@
     </div>
 </div>
 
-<!-- Quick Actions -->
+<!-- Ops rail: decision paths, not generic icon grid -->
 <div class="mt-4">
-    <div class="section-label">Aksi cepat</div>
-    <div class="row g-3 action-grid">
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/calculator" class="btn btn-copper btn-action w-100">
-            <i class="bi bi-calculator"></i>
-            <span class="small">Kalkulator</span>
+    <div class="section-label">Alur kerja periode ini</div>
+    <div class="ops-rail mb-3">
+        <a href="/withholding" class="ops-tile primary">
+            <span class="ops-kicker">Catat</span>
+            <span class="ops-title">Potongan PPh 23/26/Final</span>
+            <span class="ops-hint">Vendor, jasa, sewa — masuk ke rekonsiliasi masa</span>
+        </a>
+        <a href="/pph21" class="ops-tile">
+            <span class="ops-kicker">Payroll</span>
+            <span class="ops-title">Log PPh 21 pegawai</span>
+            <span class="ops-hint">Input gaji bruto + PTKP, total otomatis</span>
+        </a>
+        <a href="/reports/period" class="ops-tile">
+            <span class="ops-kicker">Lapor</span>
+            <span class="ops-title">Ringkas &amp; export periode</span>
+            <span class="ops-hint">Preview cetak + CSV untuk arsip/SPT</span>
         </a>
     </div>
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/withholding" class="btn btn-outline-copper btn-action w-100">
-            <i class="bi bi-plus-circle"></i>
-            <span class="small">PPh 23/26</span>
-        </a>
-    </div>
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/pph21" class="btn btn-outline-copper btn-action w-100">
-            <i class="bi bi-people"></i>
-            <span class="small">PPh 21</span>
-        </a>
-    </div>
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/documents" class="btn btn-outline-copper btn-action w-100">
-            <i class="bi bi-file-earmark-plus"></i>
-            <span class="small">Dokumen</span>
-        </a>
-    </div>
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/reports/period" class="btn btn-outline-copper btn-action w-100">
-            <i class="bi bi-bar-chart"></i>
-            <span class="small">Laporan</span>
-        </a>
-    </div>
-    <div class="col-lg-2 col-sm-4 col-6">
-        <a href="/calendar" class="btn btn-outline-copper btn-action w-100">
-            <i class="bi bi-calendar3"></i>
-            <span class="small">Kalender</span>
-        </a>
-    </div>
+    <div class="section-label">Alat pendukung</div>
+    <div class="row g-2 action-grid">
+        <div class="col-lg-3 col-sm-4 col-6">
+            <a href="/calculator" class="btn btn-outline-copper btn-action w-100">
+                <i class="bi bi-calculator" aria-hidden="true"></i>
+                <span class="small">Kalkulator</span>
+            </a>
+        </div>
+        <div class="col-lg-3 col-sm-4 col-6">
+            <a href="/documents" class="btn btn-outline-copper btn-action w-100">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <span class="small">Dokumen ({{ dash.doc_count }})</span>
+            </a>
+        </div>
+        <div class="col-lg-3 col-sm-4 col-6">
+            <a href="/calendar" class="btn btn-outline-copper btn-action w-100">
+                <i class="bi bi-calendar3" aria-hidden="true"></i>
+                <span class="small">Kalender deadline</span>
+            </a>
+        </div>
+        <div class="col-lg-3 col-sm-4 col-6">
+            <a href="/reports/period" class="btn btn-outline-copper btn-action w-100">
+                <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                <span class="small">Laporan detail</span>
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

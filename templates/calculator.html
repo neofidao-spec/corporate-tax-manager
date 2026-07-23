@@ -2,8 +2,9 @@
 {% block title %}Kalkulator Pajak{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Kalkulator pajak</h2>
-    <div class="subtitle">Hitung PPh 21, 23, 26, PPN, PPh Badan, PPh Final, dan lainnya</div>
+    <div class="eyebrow">Mesin hitung · Referensi cepat</div>
+    <h2>Kalkulator masa pajak</h2>
+    <div class="subtitle">Hasil siap disalin ke log potongan / payroll — bukan sekadar demo angka</div>
 </div>
 
 <div class="calc-panel">
@@ -100,9 +101,9 @@
         </div>
         {% if calc_type.startswith('pph21') and results %}
         <div class="result-box mt-3 is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
             <div class="result-title">
-                <i class="bi bi-check-circle me-1 text-accent"></i>
-                Hasil PPh 21 {{ 'non pegawai' if 'non' in calc_type else 'pegawai tetap' }}
+                PPh 21 · {{ 'bukan pegawai' if 'non' in calc_type else 'pegawai tetap' }}
             </div>
             {% if result_summary %}
             <pre class="mb-2 small text-muted" style="white-space:pre-wrap;">{{ result_summary }}</pre>
@@ -441,10 +442,8 @@
         <!-- Unified result box for PPh Final + PPh 22 -->
         {% if results and (calc_type.startswith('pph_final') or calc_type == 'pph22_impor') %}
         <div class="result-box mt-3 is-sticky">
-            <div class="result-title">
-                <i class="bi bi-check-circle me-1 text-accent"></i>
-                Hasil PPh Final
-            </div>
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-title">PPh Final / PPh 22</div>
             {% if calc_type == 'pph_final_sewa' %}
             <div class="value-line"><span>Objek</span><span>Sewa Tanah/Bangunan</span></div>
             <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>

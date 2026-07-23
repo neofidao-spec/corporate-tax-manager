@@ -6,7 +6,7 @@
     <title>{% block title %}Corporate Tax Manager{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -95,7 +95,7 @@
 
         body {
             background: var(--bg);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             color: var(--text);
             min-height: 100vh;
             line-height: 1.5;
@@ -176,6 +176,315 @@
             background: var(--danger-soft);
             color: var(--danger-text);
             border-color: #F3C4C0;
+        }
+
+        /* Tax-ops chips — human labels, not Bootstrap badge soup */
+        .tax-chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 6px;
+            padding: 0.18rem 0.5rem;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .tax-chip.pph21 {
+            background: #EEF3FA;
+            color: #1F4E7A;
+            border-color: #C9D9EC;
+        }
+        .tax-chip.pph23 {
+            background: #F0F4F8;
+            color: #3B4F6A;
+            border-color: #D5E0EC;
+        }
+        .tax-chip.pph26 {
+            background: #F4F0FA;
+            color: #4A3B6A;
+            border-color: #DDD0EC;
+        }
+        .tax-chip.pph_final {
+            background: #F7F3EA;
+            color: #6B5420;
+            border-color: #E8DDBF;
+        }
+        .tax-chip.ppn {
+            background: #EDF6F1;
+            color: #1B5E3B;
+            border-color: #C6E6D4;
+        }
+
+        /* KPI composition strip — shows what makes up total PPh */
+        .kpi-compose {
+            margin-top: 0.7rem;
+            padding-top: 0.65rem;
+            border-top: 1px solid var(--border);
+        }
+        .kpi-compose-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 0.25rem;
+        }
+        .kpi-compose-row .k { color: var(--text-muted); }
+        .kpi-compose-row .v { color: var(--text); font-weight: 650; }
+        .compose-bar {
+            display: flex;
+            height: 6px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: var(--surface-muted);
+            margin-top: 0.45rem;
+        }
+        .compose-bar .seg-pph21 { background: #4A6FA5; }
+        .compose-bar .seg-withhold { background: #3B4F6A; }
+
+        .money-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.05rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .money-stack .primary {
+            font-weight: 700;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+        .money-stack .secondary {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .ops-rail {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+        @media (max-width: 767px) {
+            .ops-rail { grid-template-columns: 1fr; }
+        }
+        .ops-tile {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            padding: 0.85rem 0.95rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-elevated);
+            text-decoration: none;
+            color: inherit;
+            min-height: 88px;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+        .ops-tile:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow);
+            background: var(--surface-hover);
+            color: inherit;
+        }
+        .ops-tile .ops-kicker {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .ops-tile .ops-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .ops-tile .ops-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+        .ops-tile.primary {
+            border-color: var(--border-strong);
+            background: linear-gradient(180deg, #FFFFFF 0%, #F5F8FB 100%);
+        }
+        .ops-tile.primary .ops-title { color: var(--primary); }
+
+        .filter-active-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.7rem 0.95rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid #D5E0EC;
+            background: var(--primary-soft);
+            color: var(--text);
+            margin-bottom: 0.85rem;
+            font-size: 0.88rem;
+        }
+        .filter-active-banner strong { color: var(--primary); }
+
+
+        /* ── Tax desk identity (non-generic) ── */
+        .app-shell {
+            background:
+                radial-gradient(1200px 420px at 8% -10%, rgba(74, 111, 165, 0.08), transparent 60%),
+                radial-gradient(900px 380px at 100% 0%, rgba(59, 79, 106, 0.05), transparent 55%),
+                var(--bg);
+            min-height: 100vh;
+        }
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            text-decoration: none;
+        }
+        .brand-mono {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'IBM Plex Serif', Georgia, serif;
+            font-weight: 700;
+            font-size: 0.92rem;
+            letter-spacing: 0.02em;
+            color: #fff;
+            background: linear-gradient(145deg, var(--primary) 0%, #2A3B52 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+            flex-shrink: 0;
+        }
+        .brand-copy {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.15;
+        }
+        .brand-copy .brand-name {
+            font-weight: 700;
+            font-size: 0.98rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .brand-copy .brand-sub {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .nav-tools {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: 0.5rem;
+            padding-left: 0.65rem;
+            border-left: 1px solid var(--border);
+        }
+        .eyebrow {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 0 0 0.25rem;
+        }
+        .page-header h2 {
+            font-family: 'IBM Plex Serif', Georgia, serif;
+            font-weight: 600;
+        }
+        .kpi-hero {
+            position: relative;
+            overflow: hidden;
+            border-left: 4px solid var(--primary);
+            background:
+                linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%);
+        }
+        .kpi-hero::after {
+            content: 'KEWAJIBAN';
+            position: absolute;
+            right: 0.85rem;
+            top: 0.7rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--text-faint);
+        }
+        .kpi-hero .value {
+            font-family: 'IBM Plex Serif', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .table-money, .money-stack .primary, .result-box .value-line span:last-child,
+        .result-box .total span, .stat-card .value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+        }
+        .result-box {
+            background:
+                linear-gradient(180deg, var(--surface-muted) 0%, var(--bg-elevated) 100%);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .result-box .result-kicker {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.45rem;
+        }
+        .result-box .result-title {
+            font-family: 'IBM Plex Serif', Georgia, serif;
+            font-weight: 600;
+            font-size: 1.02rem;
+            color: var(--text);
+            margin-bottom: 0.55rem;
+        }
+        .ops-tile {
+            position: relative;
+            border-top: 3px solid transparent;
+        }
+        .ops-tile.primary {
+            border-top-color: var(--primary);
+        }
+        .ops-tile:not(.primary) {
+            border-top-color: var(--border-strong);
+        }
+        .deadline-panel .card-header {
+            background: linear-gradient(180deg, var(--bg-elevated), var(--surface-muted));
+        }
+        .tax-desk-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.55rem 0.85rem;
+            margin-bottom: 1rem;
+            border: 1px dashed var(--border-strong);
+            border-radius: var(--radius-sm);
+            background: var(--surface-muted);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .tax-desk-banner strong { color: var(--primary); }
+        [data-theme="dark"] .app-shell {
+            background:
+                radial-gradient(1000px 400px at 10% -10%, rgba(142, 172, 206, 0.10), transparent 55%),
+                var(--bg);
+        }
+        [data-theme="dark"] .kpi-hero {
+            background: linear-gradient(180deg, #1E293B 0%, #1A2636 100%);
+        }
+        [data-theme="dark"] .brand-mono {
+            background: linear-gradient(145deg, #8EACCE 0%, #5F7FA3 100%);
+            color: #0F172A;
         }
 
         /* ── Navbar ── */
@@ -1012,12 +1321,16 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="is-loading" aria-busy="true">
+<body class="is-loading app-shell" aria-busy="true">
     <a class="skip-link visually-hidden-focusable" href="#main-content">Loncat ke konten utama</a>
     <nav class="navbar navbar-expand-md sticky-top" aria-label="Navigasi utama">
         <div class="container app-main py-0">
-            <a class="navbar-brand" href="/" aria-label="Corporate Tax Manager — Beranda">
-                <i class="bi bi-shield-check" aria-hidden="true"></i> Corporate Tax
+            <a class="navbar-brand brand-mark" href="/" aria-label="Corporate Tax Manager — Beranda">
+                <span class="brand-mono" aria-hidden="true">CT</span>
+                <span class="brand-copy">
+                    <span class="brand-name">Corporate Tax</span>
+                    <span class="brand-sub">Meja Pajak</span>
+                </span>
             </a>
             <button class="navbar-toggler border" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Buka menu navigasi">
                 <i class="bi bi-list" aria-hidden="true"></i>
@@ -1028,68 +1341,67 @@
                         <a class="nav-link {% if request.path == '/' %}active{% endif %}"
                            href="/"
                            {% if request.path == '/' %}aria-current="page"{% endif %}>
-                            <i class="bi bi-house-door" aria-hidden="true"></i> Beranda
+                            Beranda
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/calculator') %}active{% endif %}"
                            href="/calculator"
                            {% if request.path.startswith('/calculator') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-calculator" aria-hidden="true"></i> Kalkulator
+                            Kalkulator
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/withholding') %}active{% endif %}"
                            href="/withholding"
                            {% if request.path.startswith('/withholding') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-receipt" aria-hidden="true"></i> PPh 23/26
+                            PPh 23/26
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/pph21') %}active{% endif %}"
                            href="/pph21"
                            {% if request.path.startswith('/pph21') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-people" aria-hidden="true"></i> PPh 21
+                            PPh 21
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}"
                            href="/reports/period"
                            {% if request.path.startswith('/reports') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-bar-chart" aria-hidden="true"></i> Laporan
+                            Laporan
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/documents') %}active{% endif %}"
                            href="/documents"
                            {% if request.path.startswith('/documents') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-folder2" aria-hidden="true"></i> Dokumen
+                            Dokumen
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/calendar') %}active{% endif %}"
                            href="/calendar"
                            {% if request.path.startswith('/calendar') %}aria-current="page"{% endif %}>
-                            <i class="bi bi-calendar3" aria-hidden="true"></i> Kalender
+                            Kalender
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
-                                            <li class="nav-item">
-                        <button type="button" id="darkModeToggle" class="density-toggle"
-                                aria-pressed="false"
-                                aria-label="Ubah mode gelap/terang"
-                                title="Mode gelap/terang">
-                            <i class="bi bi-moon-stars" aria-hidden="true"></i>
-                        </button>
-                    </li>
-
-                    <button type="button" id="densityToggle" class="density-toggle"
-                                aria-pressed="false"
-                                aria-label="Ubah kepadatan tampilan"
-                                title="Ubah kepadatan tampilan">
-                            <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
-                            <span id="densityToggleLabel">Ringkas</span>
-                        </button>
+                        <div class="nav-tools">
+                            <button type="button" id="darkModeToggle" class="density-toggle"
+                                    aria-pressed="false"
+                                    aria-label="Ubah mode gelap/terang"
+                                    title="Mode gelap/terang">
+                                <i class="bi bi-moon-stars" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" id="densityToggle" class="density-toggle"
+                                    aria-pressed="false"
+                                    aria-label="Ubah kepadatan tampilan"
+                                    title="Ubah kepadatan tampilan">
+                                <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
+                                <span id="densityToggleLabel">Ringkas</span>
+                            </button>
+                        </div>
                     </li>
                 </ul>
             </div>

@@ -610,7 +610,8 @@ class TestWebApp(unittest.TestCase):
     def test_period_report_page(self):
         r = self.client.get('/reports/period?year=2026&month=7')
         self.assertEqual(r.status_code, 200)
-        self.assertIn(b'Laporan periode', r.data)
+        self.assertIn(b'Laporan & export periode', r.data)
+        self.assertIn(b'Arsip masa', r.data)
 
     def test_period_report_print_and_export(self):
         # seed some data for current period

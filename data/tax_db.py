@@ -884,6 +884,8 @@ class TaxDB:
         return {
             'total_due_this_month': total_due,
             'total_year': total_year,
+            'total_withholding_month': total_withholding_month,
+            'total_withholding_year': total_withholding_year,
             'total_pph21_month': total_pph21_month,
             'total_pph21_year': total_pph21_year,
             'doc_count': doc_count,

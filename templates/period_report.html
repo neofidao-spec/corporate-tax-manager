@@ -3,8 +3,9 @@
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-        <h2>Laporan periode</h2>
-        <div class="subtitle">Ringkasan potongan pajak — {{ month_labels[selected_month] }} {{ selected_year }}</div>
+        <div class="eyebrow">Arsip masa</div>
+        <h2>Laporan & export periode</h2>
+        <div class="subtitle">Ringkas beban PPh — {{ month_labels[selected_month] }} {{ selected_year }}</div>
     </div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-outline-copper btn-sm"
@@ -42,28 +43,43 @@
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-4 col-12">
+    <div class="col-md-5 col-12">
         <div class="card stat-card kpi-hero h-100">
             <div class="label">Total PPh periode</div>
             <div class="value">Rp {{ "{:,.0f}".format(summary.grand_total) }}</div>
+            {% set wh = summary.withholding_total or 0 %}
+            {% set p21 = summary.pph21_total or 0 %}
+            {% set due = summary.grand_total or 0 %}
+            <div class="kpi-compose">
+                <div class="kpi-compose-row">
+                    <span class="k">PPh 23/26/Final</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(wh) }}</span>
+                </div>
+                <div class="kpi-compose-row">
+                    <span class="k">PPh 21</span>
+                    <span class="v">Rp {{ "{:,.0f}".format(p21) }}</span>
+                </div>
+                {% if due > 0 %}
+                <div class="compose-bar" aria-hidden="true">
+                    <div class="seg-withhold" style="width: {{ (wh / due * 100)|round(1) }}%;"></div>
+                    <div class="seg-pph21" style="width: {{ (p21 / due * 100)|round(1) }}%;"></div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="card stat-card h-100">
-            <div class="label">PPh 23/26/Final</div>
-            <div class="value">Rp {{ "{:,.0f}".format(summary.withholding_total or 0) }}</div>
+            <div class="label">Transaksi</div>
+            <div class="value">{{ summary.transaction_count or 0 }}</div>
+            <div class="small text-muted mt-2">{{ summary.count }} grup jenis</div>
         </div>
     </div>
-    <div class="col-md-3 col-6">
+    <div class="col-md-4 col-6">
         <div class="card stat-card h-100">
-            <div class="label">PPh 21</div>
-            <div class="value">Rp {{ "{:,.0f}".format(summary.pph21_total or 0) }}</div>
-        </div>
-    </div>
-    <div class="col-md-2 col-6">
-        <div class="card stat-card h-100">
-            <div class="label">Jumlah grup</div>
-            <div class="value">{{ summary.count }}</div>
+            <div class="label">Periode</div>
+            <div class="value" style="font-size:1.15rem;">{{ month_labels[selected_month] }} {{ selected_year }}</div>
+            <div class="small text-muted mt-2">Siap preview cetak / CSV</div>
         </div>
     </div>
 </div>
@@ -90,7 +106,7 @@
                     {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
                     {% for d in summary.details %}
                     <tr>
-                        <td><span class="badge bg-secondary">{{ labels.get(d.tax_code, d.tax_code) }}</span></td>
+                        <td><span class="tax-chip {{ d.tax_code }}">{{ labels.get(d.tax_code, d.tax_code) }}</span></td>
                         <td>{{ d.obj_type }}</td>
                         <td>{{ d.count }}</td>
                         <td class="table-money">Rp {{ "{:,.0f}".format(d.total_amount or 0) }}</td>
