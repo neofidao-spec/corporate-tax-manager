@@ -6,6 +6,7 @@ Membantu tugas bagian pajak perusahaan secara komprehensif.
 
 import os
 import sys
+import re
 from datetime import datetime, date
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -19,6 +20,23 @@ from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
 
 calc = TaxCalculator()
+
+
+def _parse_currency(val):
+    """Strip currency mask (Rp, ., etc.) and return float."""
+    if isinstance(val, (int, float)):
+        return float(val)
+    if not val:
+        return 0.0
+    cleaned = re.sub(r'[^0-9.,\-]', '', str(val))
+    # Remove thousand separators (Indonesia: .)
+    cleaned = cleaned.replace('.', '')
+    # Replace decimal comma with dot
+    cleaned = cleaned.replace(',', '.')
+    try:
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return 0.0
 
 
 # ─── App Factory ───
@@ -194,65 +212,65 @@ def create_app(testing=False):
             calc_type = request.form.get('calc_type', 'pph21')
             try:
                 if calc_type == 'pph21':
-                    gross = float(request.form.get('gross', 0))
+                    gross = _parse_currency(request.form.get('gross', 0))
                     status = request.form.get('ptkp_status', 'TK0')
                     results = calc.pph21(gross, status)
 
                 elif calc_type == 'pph21_nonpegawai':
-                    gross = float(request.form.get('gross_non', 0))
+                    gross = _parse_currency(request.form.get('gross_non', 0))
                     status = request.form.get('ptkp_status_non', 'TK0')
                     results = calc.pph21_non_pegawai(gross, status)
 
                 elif calc_type == 'pph23':
-                    amount = float(request.form.get('amount', 0))
+                    amount = _parse_currency(request.form.get('amount', 0))
                     obj_type = request.form.get('obj_type', 'Jasa')
                     results = calc.pph23(amount, obj_type)
 
                 elif calc_type == 'pph26':
-                    amount = float(request.form.get('amount_26', 0))
+                    amount = _parse_currency(request.form.get('amount_26', 0))
                     obj_type = request.form.get('obj_type_26', 'Jasa')
                     have_npwp = request.form.get('have_npwp') == 'on'
                     results = calc.pph26(amount, obj_type, have_npwp=have_npwp)
 
                 elif calc_type == 'ppn':
-                    price = float(request.form.get('price', 0))
-                    tariff = float(request.form.get('tariff', 11))
+                    price = _parse_currency(request.form.get('price', 0))
+                    tariff = _parse_currency(request.form.get('tariff', 11))
                     include_ppn = request.form.get('include_ppn') == 'on'
                     results = calc.ppn(price, tariff, include_ppn=include_ppn)
 
                 elif calc_type == 'ppn_impor':
-                    nilai = float(request.form.get('nilai_impor', 0))
-                    bea = float(request.form.get('bea_masuk', 0))
+                    nilai = _parse_currency(request.form.get('nilai_impor', 0))
+                    bea = _parse_currency(request.form.get('bea_masuk', 0))
                     results = calc.ppn_impor(nilai, bea)
 
                 elif calc_type == 'pph_badan':
-                    profit = float(request.form.get('profit', 0))
-                    omzet = float(request.form.get('omzet', 0))
+                    profit = _parse_currency(request.form.get('profit', 0))
+                    omzet = _parse_currency(request.form.get('omzet', 0))
                     results = calc.pph_badan(profit, omzet)
 
                 elif calc_type == 'pph_final_sewa':
-                    sewa = float(request.form.get('sewa', 0))
+                    sewa = _parse_currency(request.form.get('sewa', 0))
                     results = calc.pph_final_sewa_tanah(sewa)
 
                 elif calc_type == 'pph_final_konstruksi':
-                    nilai = float(request.form.get('konstruksi_nilai', 0))
+                    nilai = _parse_currency(request.form.get('konstruksi_nilai', 0))
                     rank = request.form.get('license_rank', 'lainnya')
                     results = calc.pph_final_konstruksi(nilai, rank)
 
                 elif calc_type == 'pph_final_pesangon':
-                    nilai = float(request.form.get('pesangon', 0))
+                    nilai = _parse_currency(request.form.get('pesangon', 0))
                     results = calc.pph_final_pesangon(nilai)
 
                 elif calc_type == 'pph_final_penjualan':
-                    harga = float(request.form.get('harga_jual', 0))
+                    harga = _parse_currency(request.form.get('harga_jual', 0))
                     results = calc.pph_final_penjualan_tanah(harga)
 
                 elif calc_type == 'pph_final_bunga':
-                    bunga = float(request.form.get('bunga_deposito', 0))
+                    bunga = _parse_currency(request.form.get('bunga_deposito', 0))
                     results = calc.pph_final_bunga_deposito(bunga)
 
                 elif calc_type == 'pph22_impor':
-                    nilai = float(request.form.get('nilai_p22', 0))
+                    nilai = _parse_currency(request.form.get('nilai_p22', 0))
                     api = request.form.get('have_api') == 'on'
                     results = calc.pph22_impor(nilai, api)
 
@@ -307,7 +325,7 @@ def create_app(testing=False):
             if not vendor:
                 flash('Nama vendor harus diisi', 'error')
                 return redirect(url_for('withholding'))
-            amount = float(request.form.get('amount', 0))
+            amount = _parse_currency(request.form.get('amount', 0))
             if amount < 0:
                 flash('Jumlah bruto tidak boleh negatif', 'error')
                 return redirect(url_for('withholding'))
@@ -392,7 +410,7 @@ def create_app(testing=False):
     def add_pph21():
         try:
             name = request.form.get('employee_name', '').strip()
-            gross = float(request.form.get('gross_salary', 0))
+            gross = _parse_currency(request.form.get('gross_salary', 0))
             ptkp = request.form.get('ptkp_status', 'TK0')
             year = request.form.get('year', type=int) or date.today().year
             month = request.form.get('month', type=int) or date.today().month

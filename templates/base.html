@@ -1651,11 +1651,138 @@
         body.is-loading {
             cursor: progress;
         }
+
+        /* ── Toast notification ── */
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: 380px;
+            pointer-events: none;
+        }
+        .toast-container .toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            box-shadow: var(--elevation-2);
+            font-size: var(--text-sm);
+            color: var(--text);
+            transform: translateX(0);
+            opacity: 1;
+            transition: transform var(--transition-base), opacity var(--transition-base);
+            animation: toast-in 0.25s ease;
+        }
+        .toast-container .toast.removing {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        .toast-container .toast.success { border-left: 3px solid var(--success); }
+        .toast-container .toast.error { border-left: 3px solid var(--danger); }
+        .toast-container .toast.warning { border-left: 3px solid var(--warning); }
+        .toast-container .toast.info { border-left: 3px solid var(--info); }
+        .toast-container .toast i { font-size: 1.15rem; flex-shrink: 0; margin-top: 1px; }
+        .toast-container .toast .toast-body { flex: 1; line-height: var(--leading-normal); }
+        .toast-container .toast .toast-close {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0 0 0 0.5rem;
+            font-size: 1.1rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .toast-container .toast .toast-close:hover { color: var(--text); }
+        @keyframes toast-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ── Floating label ── */
+        .form-floating > .form-control,
+        .form-floating > .form-select {
+            height: 52px;
+            padding: 1.2rem 0.75rem 0.4rem;
+        }
+        .form-floating > label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 0.9rem 0.85rem;
+            pointer-events: none;
+            border: 1px solid transparent;
+            transform-origin: 0 0;
+            transition: opacity var(--transition-fast), transform var(--transition-fast);
+            color: var(--text-muted);
+            font-size: var(--text-sm);
+        }
+        .form-floating > .form-control:focus ~ label,
+        .form-floating > .form-control:not(:placeholder-shown) ~ label,
+        .form-floating > .form-select ~ label {
+            opacity: 0.7;
+            transform: scale(0.8) translateY(-0.4rem);
+        }
+
+        /* ── Input error state ── */
+        .form-control.is-invalid, .form-select.is-invalid {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.1);
+        }
+        .form-control.is-invalid:focus, .form-select.is-invalid:focus {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.18);
+        }
+        .invalid-feedback {
+            font-size: var(--text-xs);
+            color: var(--danger-text);
+            margin-top: var(--space-1);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .form-control.is-valid, .form-select.is-valid {
+            border-color: var(--success);
+        }
+
+        /* ── Button loading state ── */
+        .btn.is-loading {
+            position: relative;
+            pointer-events: none;
+            color: transparent !important;
+        }
+        .btn.is-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 999px;
+            animation: btn-spin 0.6s linear infinite;
+        }
+        @keyframes btn-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="is-loading app-shell" aria-busy="true">
     <a class="skip-link visually-hidden-focusable" href="#main-content">Loncat ke konten utama</a>
+    <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-label="Notifikasi"></div>
     <nav class="navbar navbar-expand-md sticky-top" aria-label="Navigasi utama">
         <div class="container app-main py-0">
             <a class="navbar-brand brand-mark" href="/" aria-label="Corporate Tax Manager — Beranda">
@@ -1881,6 +2008,66 @@
             });
         }
         window.addEventListener('load', reveal);
+    })();
+    </script>
+
+    <script>
+    /* ── Toast system ── */
+    window.CTM = window.CTM || {};
+    window.CTM.toast = function (message, type) {
+        type = type || 'info';
+        var iconMap = { success: 'check-circle', error: 'exclamation-triangle', warning: 'exclamation-circle', info: 'info-circle' };
+        var icon = iconMap[type] || 'info-circle';
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.innerHTML = '<i class="bi bi-' + icon + '" aria-hidden="true"></i>'
+            + '<div class="toast-body">' + message + '</div>'
+            + '<button class="toast-close" onclick="this.parentElement.classList.add(\'removing\');setTimeout(function(){this.parentElement.remove()}.bind(this),200)" aria-label="Tutup">&times;</button>';
+        container.appendChild(el);
+        setTimeout(function () {
+            el.classList.add('removing');
+            setTimeout(function () { el.remove(); }, 200);
+        }, 3500);
+    };
+
+    /* ── Currency input mask ── */
+    document.querySelectorAll('.input-currency').forEach(function (input) {
+        function format(v) {
+            var num = v.replace(/[^0-9]/g, '');
+            if (!num) return '';
+            return 'Rp ' + Number(num).toLocaleString('id-ID');
+        }
+        input.addEventListener('input', function () {
+            var pos = this.selectionStart;
+            var raw = this.value.replace(/[^0-9]/g, '');
+            this.value = format(raw);
+            var digits = raw.length;
+            var newPos = 3 + digits + Math.floor((digits - 1) / 3);
+            if (pos < this.value.length) this.setSelectionRange(newPos, newPos);
+        });
+        if (input.value) {
+            input.value = format(input.value.replace(/[^0-9]/g, ''));
+        }
+    });
+
+    /* ── Auto-flash message via toast ── */
+    (function () {
+        var flash = document.querySelector('.flash-region');
+        if (flash) {
+            flash.querySelectorAll('.alert').forEach(function (al) {
+                var text = al.querySelector('div') ? al.querySelector('div').textContent.trim() : '';
+                if (text) {
+                    if (al.classList.contains('alert-success')) window.CTM.toast(text, 'success');
+                    else if (al.classList.contains('alert-danger')) window.CTM.toast(text, 'error');
+                    else if (al.classList.contains('alert-warning')) window.CTM.toast(text, 'warning');
+                    else window.CTM.toast(text, 'info');
+                }
+                al.remove();
+            });
+            flash.remove();
+        }
     })();
     </script>
     {% block extra_js %}{% endblock %}
