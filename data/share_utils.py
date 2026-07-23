@@ -48,7 +48,7 @@ def try_android_share_file(
         java_file = File(path)
         # Try FileProvider (Android 7+), fallback to Uri.fromFile
         try:
-            FileProvider = autoclass_fn('android.support.v4.content.FileProvider')
+            FileProvider = autoclass_fn('androidx.core.content.FileProvider')
             context = activity.getApplicationContext()
             uri = FileProvider.getUriForFile(
                 context,
