@@ -124,6 +124,7 @@
     {% if year %}{% set _ = qs.append('year=' ~ year) %}{% endif %}
     {% if month %}{% set _ = qs.append('month=' ~ month) %}{% endif %}
     {% if q %}{% set _ = qs.append('q=' ~ q) %}{% endif %}
+    {% if remit %}{% set _ = qs.append('remit=' ~ remit) %}{% endif %}
     {% set filter_qs = qs|join('&') %}
     <div class="toolbar">
         <a href="/pph21{% if filter_qs %}?{{ filter_qs }}{% endif %}">Kembali</a>

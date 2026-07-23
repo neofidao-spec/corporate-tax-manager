@@ -26,8 +26,6 @@ from kivy.utils import get_color_from_hex as hex2rgb
 from kivy.metrics import dp, sp
 from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle
-from kivy.uix.image import Image
-from kivy.uix.behaviors import ButtonBehavior
 
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
@@ -186,9 +184,6 @@ def accessible(widget, description, tag=True):
     return widget
 
 
-def accessible_input(widget, label):
-    """Set accessibility on a TextInput/Spinner."""
-    return accessible(widget, label)
 
 
 

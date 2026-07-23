@@ -141,7 +141,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <a href="/withholding{% if year or month or tax_code %}?{% if year %}year={{ year }}&{% endif %}{% if month %}month={{ month }}&{% endif %}{% if tax_code %}tax_code={{ tax_code }}{% endif %}{% endif %}">Kembali</a>
+        <a href="/withholding{% if year or month or tax_code or remit %}?{% if year %}year={{ year }}&{% endif %}{% if month %}month={{ month }}&{% endif %}{% if tax_code %}tax_code={{ tax_code }}&{% endif %}{% if remit %}remit={{ remit }}{% endif %}{% endif %}">Kembali</a>
         <button class="primary" onclick="window.print()">Cetak / PDF</button>
     </div>
 

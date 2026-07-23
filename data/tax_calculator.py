@@ -4,8 +4,7 @@ Perhitungan lengkap PPh 21, 23/26, PPN, PPh Badan, PPh Final (Indonesia)
 Validasi input, tarif terbaru, edge case handling.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Union, Optional
+from typing import Dict
 
 
 def _rupiah(val: float) -> str:

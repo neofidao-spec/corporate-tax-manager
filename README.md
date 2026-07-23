@@ -27,6 +27,11 @@
 | **Android (Kivy)** | Paritas fitur: kalkulator, log, PPh 21, dokumen, kalender, laporan periode |
 | **JSON API** | Endpoint `/api/calculate` dan `/api/dashboard` untuk integrasi |
 
+### v1.2.1 — Remittance operations
+- Status setor (tercatat ↔ disetor) per potongan/PPh 21
+- Dashboard ringkasan outstanding + deep-link filter
+- Density compact + print CSS lembar hitung
+- Filter by status setor (`?remit=`) pada semua list + export
 ---
 
 ## Cara Menjalankan
@@ -80,6 +85,8 @@ corporate-tax-manager/
 ├── .env.example
 ├── data/
 │   ├── tax_calculator.py   # Semua kalkulasi pajak
+│   ├── export_utils.py    # Shared CSV export helpers
+│   ├── share_utils.py     # Android share intent / clipboard
 │   └── tax_db.py           # Database layer (SQLite)
 ├── templates/
 │   ├── base.html
@@ -118,7 +125,7 @@ Saat ini suite mencakup kalkulator, DB, routes web (CRUD, print, export), dan ed
 
 - **Backend:** Python 3, Flask, SQLite
 - **Mobile:** Kivy + Buildozer
-- **Frontend:** Bootstrap 5, Bootstrap Icons, Inter font, neutral tokens
+- **Frontend:** Bootstrap 5, Bootstrap Icons, IBM Plex Sans/Serif, neutral tokens, tax-desk identity
 - **Testing:** pytest, unittest
 - **CI/CD:** GitHub Actions (APK build + tag release)
 
