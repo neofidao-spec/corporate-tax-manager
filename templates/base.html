@@ -117,8 +117,8 @@
             --border-strong: #3E4F65;
             --text: #E2E8F0;
             --text-secondary: #B0BED0;
-            --text-muted: #8899AF;
-            --text-faint: #6B7A8D;
+            --text-muted: #A0B4C8;
+            --text-faint: #7F8FA3;
             --primary: #8EACCE;
             --primary-hover: #7B9ABD;
             --primary-soft: #253548;
@@ -126,6 +126,21 @@
             --accent-soft: #1F3045;
             --surface-muted: #1A2636;
             --surface-hover: #243348;
+
+            /* Status colors — dark contrast */
+            --success: #4CAF7F;
+            --success-soft: #1A3A2A;
+            --success-text: #7ED4AD;
+            --warning: #D4A843;
+            --warning-soft: #3A2E18;
+            --warning-text: #F0D78C;
+            --danger: #E84C3F;
+            --danger-soft: #3A1C18;
+            --danger-text: #F5A89F;
+            --info: #6AACDE;
+            --info-soft: #1A2D42;
+            --info-text: #A0CFEF;
+
             --shadow: var(--elevation-1);
             --shadow-hover: var(--elevation-2);
             --focus-ring: 0 0 0 3px rgba(160,191,224,0.28);
@@ -133,6 +148,27 @@
             --elevation-2: 0 4px 12px rgba(0,0,0,0.25);
             --elevation-3: 0 8px 20px rgba(0,0,0,0.30);
             --table-stripe: rgba(255,255,255,0.025);
+        }
+
+        /* Dark mode overrides for light-specific backgrounds */
+        [data-theme="dark"] .kpi-hero {
+            background: linear-gradient(180deg, #1E293B 0%, #1A2636 100%);
+        }
+        [data-theme="dark"] .status-chip.ok {
+            border-color: #2A4A3A;
+        }
+        [data-theme="dark"] .status-chip.soon {
+            border-color: #4A3E20;
+        }
+        [data-theme="dark"] .status-chip.overdue {
+            border-color: #4A2420;
+        }
+        [data-theme="dark"] .result-box.lembar-hitung {
+            border-color: #2D3B4F;
+        }
+        [data-theme="dark"] .navbar-toggler,
+        [data-theme="dark"] .navbar {
+            border-color: #2D3B4F;
         }
 
         * { box-sizing: border-box; }
@@ -1776,6 +1812,44 @@
         }
         @keyframes btn-spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* ── Micro-interactions ── */
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-copper:hover, .btn-primary-app:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--elevation-2);
+        }
+        .card {
+            transition: transform var(--transition-base), box-shadow var(--transition-base);
+        }
+        .card:hover {
+            box-shadow: var(--elevation-2);
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--elevation-2);
+        }
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--elevation-2);
+        }
+        .nav-link {
+            transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+        }
+        a {
+            transition: color var(--transition-fast);
+        }
+        .form-control, .form-select {
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+        }
+        .toast {
+            will-change: transform, opacity;
+        }
+        html {
+            scroll-behavior: smooth;
         }
     </style>
     {% block extra_head %}{% endblock %}
