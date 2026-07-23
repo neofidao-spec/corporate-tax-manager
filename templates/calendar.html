@@ -46,9 +46,15 @@
                         {% if day > 0 %}
                             <div class="fw-semibold" style="font-size: 0.95rem;">{{ day }}</div>
                             {% if day in deadlines %}
-                            <div class="badge badge-deadline bg-{{ 'danger' if (day < today.day and month == today.month and year == today.year) else 'primary' }}"
+                            {% set d_status = deadlines.get(day, {}) %}
+                            {% if d_status is mapping %}
+                            {% set d_class = 'danger' if d_status.get('status') == 'LEWAT' else ('warning' if d_status.get('status') == 'SEGERA' else 'success') %}
+                            {% else %}
+                            {% set d_class = 'danger' if (day < today.day and month == today.month and year == today.year) else 'primary' %}
+                            {% endif %}
+                            <div class="badge badge-deadline bg-{{ d_class }}"
                                  style="font-size: 0.58rem; white-space: normal;">
-                                {{ deadlines[day] }}
+                                {% if d_status is mapping %}{{ d_status.get('title', d_status) }}{% else %}{{ d_status }}{% endif %}
                             </div>
                             {% endif %}
                         {% endif %}

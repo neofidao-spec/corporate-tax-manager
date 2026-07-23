@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from data.tax_calculator import TaxCalculator
 from data.tax_db import TaxDB
+from data.company_profile import load_profile, save_profile
 
 calc = TaxCalculator()
 
@@ -879,6 +880,26 @@ def create_app(testing=False):
         y = request.args.get('year') or request.form.get('year')
         m = request.args.get('month') or request.form.get('month')
         return redirect(url_for('calendar_view', year=y, month=m))
+
+    # ══════════════════════════════════════════════════
+    # ROUTES: Settings
+    # ══════════════════════════════════════════════════
+
+    @app.route('/settings', methods=['GET', 'POST'])
+    def settings():
+        profile = load_profile(fallback_dir=os.path.dirname(__file__))
+        if request.method == 'POST':
+            profile['company_name'] = request.form.get('company_name', '').strip()
+            profile['npwp'] = request.form.get('npwp', '').strip()
+            profile['address'] = request.form.get('address', '').strip()
+            try:
+                profile['tax_year'] = int(request.form.get('tax_year', 2026))
+            except (TypeError, ValueError):
+                pass
+            save_profile(profile, fallback_dir=os.path.dirname(__file__))
+            flash('Pengaturan tersimpan', 'success')
+            return redirect(url_for('settings'))
+        return render_template('settings.html', profile=profile)
 
     # ══════════════════════════════════════════════════
     # ROUTES: API (JSON)

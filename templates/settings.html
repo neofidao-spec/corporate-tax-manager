@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Corporate Tax Manager — Pengaturan{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow">Meja Pajak · Konfigurasi</div>
+    <h2>Pengaturan perusahaan</h2>
+    <div class="subtitle">Profil, NPWP, dan preferensi sistem</div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form method="POST" class="card">
+            <div class="card-header">Profil perusahaan</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="companyName">Nama perusahaan</label>
+                    <input type="text" id="companyName" name="company_name"
+                           class="form-control" placeholder="PT. Contoh Pajak"
+                           value="{{ profile.company_name or '' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="npwp">NPWP</label>
+                    <input type="text" id="npwp" name="npwp"
+                           class="form-control" placeholder="00.000.000.0-000.000"
+                           value="{{ profile.npwp or '' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="address">Alamat</label>
+                    <textarea id="address" name="address" class="form-control" rows="2"
+                              placeholder="Jl. Pajak No. 1">{{ profile.address or '' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="taxYear">Tahun pajak aktif</label>
+                    <input type="number" id="taxYear" name="tax_year"
+                           class="form-control" style="width: 120px;"
+                           value="{{ profile.tax_year or 2026 }}" min="2000" max="2100">
+                </div>
+                <button type="submit" class="btn btn-copper">
+                    <i class="bi bi-check-lg" aria-hidden="true"></i> Simpan pengaturan
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">Sistem</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="text-small">Versi aplikasi</span>
+                    <span class="fw-semibold">v1.2.1</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="text-small">Database</span>
+                    <span class="text-muted" style="font-size: 0.82rem;">SQLite</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2">
+                    <span class="text-small">Stack</span>
+                    <span class="text-muted" style="font-size: 0.82rem;">Flask + Kivy</span>
+                </div>
+                <hr>
+                <p class="text-muted text-small mb-0">
+                    Data profil disimpan di <code>ctm_company.json</code>.
+                    Backup file ini untuk mempertahankan pengaturan antar perangkat.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">Pintasan keyboard</div>
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span class="text-small"><kbd>Ctrl+K</kbd> / <kbd>⌘K</kbd></span>
+                    <span class="text-muted" style="font-size: 0.82rem;">Cari cepat</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span class="text-small"><kbd>Ctrl+1</kbd></span>
+                    <span class="text-muted" style="font-size: 0.82rem;">Dashboard</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span class="text-small"><kbd>Ctrl+2</kbd></span>
+                    <span class="text-muted" style="font-size: 0.82rem;">Kalkulator</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span class="text-small"><kbd>Ctrl+3</kbd></span>
+                    <span class="text-muted" style="font-size: 0.82rem;">Potongan PPh</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span class="text-small"><kbd>Ctrl+4</kbd></span>
+                    <span class="text-muted" style="font-size: 0.82rem;">PPh 21</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

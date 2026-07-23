@@ -1849,6 +1849,13 @@
                             <i class="bi bi-calendar3" aria-hidden="true"></i> Kalender
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith('/settings') %}active{% endif %}"
+                           href="/settings"
+                           {% if request.path.startswith('/settings') %}aria-current="page"{% endif %}>
+                            <i class="bi bi-gear" aria-hidden="true"></i>
+                        </a>
+                    </li>
                     <li class="nav-item ms-lg-2">
                         <div class="nav-tools">
                             <button type="button" id="darkModeToggle" class="density-toggle"
@@ -2069,6 +2076,39 @@
             flash.remove();
         }
     })();
+
+    /* ── Keyboard shortcuts ── */
+    document.addEventListener('keydown', function (e) {
+        var mod = e.ctrlKey || e.metaKey;
+        if (mod && e.key === 'k') {
+            e.preventDefault();
+            var q = prompt('Cari halaman…\\n(calculator, PPh 23/26, PPh 21, laporan, dokumen, kalender, settings)');
+            if (q) {
+                var pages = {
+                    'beranda': '/', 'dashboard': '/',
+                    'calculator': '/calculator', 'kalkulator': '/calculator',
+                    'pph23': '/withholding', 'pph26': '/withholding', 'potongan': '/withholding',
+                    'pph21': '/pph21', 'payroll': '/pph21',
+                    'laporan': '/reports/period', 'report': '/reports/period',
+                    'dokumen': '/documents', 'documents': '/documents',
+                    'kalender': '/calendar', 'calendar': '/calendar',
+                    'settings': '/settings', 'pengaturan': '/settings',
+                };
+                var key = q.toLowerCase().trim();
+                if (pages[key]) {
+                    window.location.href = pages[key];
+                } else {
+                    window.CTM.toast('Halaman "' + q + '" tidak ditemukan', 'warning');
+                }
+            }
+        }
+        if (mod && e.key === '1') { e.preventDefault(); window.location.href = '/'; }
+        if (mod && e.key === '2') { e.preventDefault(); window.location.href = '/calculator'; }
+        if (mod && e.key === '3') { e.preventDefault(); window.location.href = '/withholding'; }
+        if (mod && e.key === '4') { e.preventDefault(); window.location.href = '/pph21'; }
+        if (mod && e.key === '5') { e.preventDefault(); window.location.href = '/reports/period'; }
+        if (mod && e.key === '6') { e.preventDefault(); window.location.href = '/documents'; }
+    });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
