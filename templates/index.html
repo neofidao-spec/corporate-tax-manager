@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Corporate Tax Manager — Beranda{% endblock %}
 {% block content %}
+
+<!-- Page header: period nav -->
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <div class="eyebrow">Meja Pajak · Operasional</div>
-        <h2>Posisi kewajiban masa</h2>
-        <div class="subtitle">Fokus: apa yang harus dicatat, dilapor, dan disetor untuk {{ month_labels[selected_month] }} {{ selected_year }}</div>
+        <h2>Posisi kewajiban {{ month_labels[selected_month] }} {{ selected_year }}</h2>
+        <div class="subtitle">Fokus pada apa yang harus dicatat, dilapor, dan disetor</div>
     </div>
     <form method="GET" class="period-toolbar d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-outline-copper btn-sm" href="/?year={{ prev_y }}&month={{ prev_m }}" title="Periode sebelumnya">
@@ -24,61 +26,11 @@
     </form>
 </div>
 
-<div class="tax-desk-banner">
-    <div>
-        <strong>Alur masa pajak:</strong>
-        catat potongan → rekonsiliasi PPh 21 → cek deadline → export laporan
-    </div>
-    <div class="text-muted">Bukan dashboard dekoratif — hanya data yang mempengaruhi keputusan setor.</div>
-</div>
-
-{% if urgent_deadlines %}
-<div class="alert-reminder {% if urgent_deadlines|selectattr('status', 'equalto', 'LEWAT')|list %}danger{% endif %}">
-    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-        <div>
-            <strong><i class="bi bi-bell me-1"></i> Reminder deadline</strong>
-            <div class="small mt-1">
-                {% for d in urgent_deadlines[:3] %}
-                <div>
-                    <span class="status-chip {{ 'overdue' if d.status == 'LEWAT' else 'soon' }}">{{ d.status }}</span>
-                    {{ d.title }} — {{ d.date }}
-                </div>
-                {% endfor %}
-                {% if urgent_deadlines|length > 3 %}
-                <div class="text-muted">+{{ urgent_deadlines|length - 3 }} deadline lain</div>
-                {% endif %}
-            </div>
-        </div>
-        <a href="/calendar" class="btn btn-sm btn-outline-copper">Buka kalender</a>
-    </div>
-</div>
-{% endif %}
-
-{% if dash.outstanding_count %}
-<div class="alert-reminder outstanding-remit {% if dash.outstanding_amount %}danger{% endif %}">
-    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-        <div>
-            <strong>Belum disetor · masa {{ month_labels[selected_month] }} {{ selected_year }}</strong>
-            <div class="small mt-1">
-                {{ dash.outstanding_count }} baris · Rp {{ "{:,.0f}".format(dash.outstanding_amount or 0) }}
-                <span class="text-muted">
-                    (potongan {{ dash.outstanding_withholding_count or 0 }} · PPh 21 {{ dash.outstanding_pph21_count or 0 }})
-                </span>
-            </div>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="/withholding?year={{ selected_year }}&month={{ selected_month }}&remit=tercatat" class="btn btn-sm btn-outline-copper">Potongan belum disetor</a>
-            <a href="/pph21?year={{ selected_year }}&month={{ selected_month }}&remit=tercatat" class="btn btn-sm btn-outline-copper">PPh 21 belum disetor</a>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Stat Cards: decision-first tax ops hierarchy -->
+<!-- Row 1: KPI hierarchy — one hero, two supporting -->
 <div class="row g-3 mb-4">
-    <div class="col-lg-5 col-md-6 col-12">
+    <div class="col-lg-6 col-md-8 col-12">
         <div class="card stat-card kpi-hero h-100">
-            <div class="label">Kewajiban PPh periode ini</div>
+            <div class="label">Pajak yang harus dibayar · {{ month_labels[selected_month] }}</div>
             <div class="value">Rp {{ "{:,.0f}".format(dash.total_due_this_month) }}</div>
             {% if comparison %}
             <div class="trend trend-{{ comparison.direction }}">
@@ -115,46 +67,159 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6 col-6">
+    <div class="col-lg-3 col-md-4 col-6">
         <div class="card stat-card h-100">
-            <div class="label">Total PPh {{ dash.year }}</div>
-            <div class="value">Rp {{ "{:,.0f}".format(dash.total_year) }}</div>
-            <div class="kpi-compose">
-                <div class="kpi-compose-row">
-                    <span class="k">Potongan</span>
-                    <span class="v">Rp {{ "{:,.0f}".format(dash.total_withholding_year or 0) }}</span>
-                </div>
-                <div class="kpi-compose-row">
-                    <span class="k">PPh 21</span>
-                    <span class="v">Rp {{ "{:,.0f}".format(dash.total_pph21_year or 0) }}</span>
-                </div>
+            <span class="icon"><i class="bi bi-clock" aria-hidden="true"></i></span>
+            <div class="label">Deadline terdekat</div>
+            {% set urgent = urgent_deadlines|list %}
+            {% if urgent %}
+            {% set closest = urgent|first %}
+            <div class="value" style="font-size: 1.25rem;">
+                <span class="status-chip {{ 'overdue' if closest.status == 'LEWAT' else 'soon' }}">{{ closest.status }}</span>
+                {{ closest.date }}
+            </div>
+            <div class="small text-muted mt-2">{{ closest.title }}</div>
+            {% if urgent|length > 1 %}
+            <div class="small text-muted">+{{ urgent|length - 1 }} deadline lain</div>
+            {% endif %}
+            {% else %}
+            <div class="value" style="font-size: 1.15rem;">&mdash;</div>
+            <div class="small text-muted mt-2">Tidak ada deadline dalam window {{ deadline_window }} hr</div>
+            {% endif %}
+            <div class="mt-auto pt-2">
+                <a href="/calendar" class="btn btn-sm btn-outline-copper w-100">Buka kalender</a>
             </div>
         </div>
     </div>
-    <div class="col-lg-2 col-md-6 col-6">
+    <div class="col-lg-3 col-md-4 col-6">
         <div class="card stat-card h-100">
-            <div class="label">PPh 21 bulan ini</div>
-            <div class="value">Rp {{ "{:,.0f}".format(dash.total_pph21_month or 0) }}</div>
-            <div class="small text-muted mt-2">Siap rekonsiliasi payroll</div>
+            <span class="icon"><i class="bi bi-folder2" aria-hidden="true"></i></span>
+            <div class="label">Dokumen periode ini</div>
+            <div class="value">{{ dash.doc_count or 0 }}</div>
+            <div class="small text-muted mt-2">
+                {% if dash.doc_count and dash.doc_count > 0 %}
+                {{ dash.doc_count }} dokumen tersimpan
+                {% else %}
+                Belum ada dokumen — upload yang diperlukan
+                {% endif %}
+            </div>
+            <div class="mt-auto pt-2">
+                <a href="/documents" class="btn btn-sm btn-outline-copper w-100">Kelola dokumen</a>
+            </div>
         </div>
     </div>
-    <div class="col-lg-2 col-md-6 col-6">
-        <div class="card stat-card h-100">
-            <div class="label">Belum disetor</div>
-            <div class="value">Rp {{ "{:,.0f}".format(dash.outstanding_amount or 0) }}</div>
-            <div class="small text-muted mt-2">
-                {% if dash.outstanding_count %}
-                {{ dash.outstanding_count }} baris · window {{ deadline_window }} hr
+</div>
+
+<!-- Row 2: Progress masa + Chart -->
+<div class="row g-4 mb-4">
+    <!-- Progress masa -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Progress masa {{ month_labels[selected_month] }}</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-small text-muted">Penyelesaian</span>
+                        <span class="fw-bold">{{ progress_pct }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 999px; background: var(--surface-muted);">
+                        <div class="progress-bar" role="progressbar"
+                             style="width: {{ progress_pct }}%; border-radius: 999px; background: var(--primary); transition: width 0.4s ease;"
+                             aria-valuenow="{{ progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <ul class="list-unstyled mb-0">
+                    {% for step in progress_steps %}
+                    <li class="d-flex align-items-center gap-2 py-2 border-bottom border-light">
+                        {% if step.done %}
+                        <span class="d-inline-flex align-items-center justify-content-center"
+                              style="width: 22px; height: 22px; border-radius: 999px; background: var(--success-soft); color: var(--success-text); font-size: 0.75rem;">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span class="text-muted" style="text-decoration: line-through;">{{ step.label }}</span>
+                        {% else %}
+                        <span class="d-inline-flex align-items-center justify-content-center"
+                              style="width: 22px; height: 22px; border-radius: 999px; background: var(--surface-muted); color: var(--text-faint); font-size: 0.75rem;">
+                            {{ loop.index }}
+                        </span>
+                        <span>{{ step.label }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if dash.outstanding_count > 0 and (dash.outstanding_amount or 0) > 0 %}
+                <div class="alert-reminder mt-3 mb-0 py-2 px-3" style="font-size: 0.82rem;">
+                    <i class="bi bi-exclamation-triangle me-1" style="color: var(--warning-text);"></i>
+                    <strong>Belum disetor:</strong> Rp {{ "{:,.0f}".format(dash.outstanding_amount or 0) }}
+                    <span class="text-muted">({{ dash.outstanding_count }} baris)</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart + yearly table -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Beban PPh {{ selected_year }} · bulanan</span>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#3B4F6A;"></span>
+                        <span class="text-muted">Potongan</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#4A6FA5;"></span>
+                        <span class="text-muted">PPh 21</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if chart_max and chart_max > 0 %}
+                <canvas id="pphChart" height="160" style="max-height: 200px; margin-bottom: 1rem;"></canvas>
+                {% endif %}
+
+                {% if yearly %}
+                <div class="table-responsive">
+                    <table class="table table-custom table-buku-masa">
+                        <thead>
+                            <tr>
+                                <th>Bulan</th>
+                                <th>Jenis</th>
+                                <th>Jumlah</th>
+                                <th class="text-end">Total PPh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set months = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'Mei',6:'Jun',7:'Jul',8:'Agu',9:'Sep',10:'Okt',11:'Nov',12:'Des'} %}
+                            {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
+                            {% for r in yearly %}
+                            <tr>
+                                <td><span class="tax-chip">{{ months[r.tax_month] }}</span></td>
+                                <td><span class="tax-chip {{ r.tax_code }}">{{ labels.get(r.tax_code, r.tax_code) }}</span></td>
+                                <td>{{ r.count }}</td>
+                                <td class="table-money">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                Semua tercatat sudah disetor
+                <div class="empty-state">
+                    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                    <div class="empty-title">Belum ada beban PPh tahun ini</div>
+                    <p>Langkah berikutnya untuk masa berjalan: catat potongan vendor atau input payroll PPh 21.</p>
+                    <a href="/withholding" class="btn btn-copper btn-sm">Catat potongan</a>
+                    <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Input PPh 21</a>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+<!-- Row 3: Deadline list + Ops rail -->
 <div class="row g-4">
-    <!-- Deadline Section -->
     <div class="col-lg-4">
         <div class="card h-100 deadline-panel">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -198,117 +263,120 @@
         </div>
     </div>
 
-    <!-- Chart + table -->
+    <!-- Ops rail + action grid -->
     <div class="col-lg-8">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Beban PPh {{ dash.year }} · bulanan</span>
-                {% if chart_max and chart_max > 0 %}
-                <small class="text-muted">Maks: Rp {{ "{:,.0f}".format(chart_max) }}</small>
-                {% endif %}
+        <div class="section-label">Alur kerja periode ini</div>
+        <div class="ops-rail mb-3">
+            <a href="/withholding" class="ops-tile primary">
+                <span class="ops-kicker">Catat</span>
+                <span class="ops-title">Potongan PPh 23/26/Final</span>
+                <span class="ops-hint">Vendor, jasa, sewa — masuk ke rekonsiliasi masa</span>
+            </a>
+            <a href="/pph21" class="ops-tile">
+                <span class="ops-kicker">Payroll</span>
+                <span class="ops-title">Log PPh 21 pegawai</span>
+                <span class="ops-hint">Input gaji bruto + PTKP, total otomatis</span>
+            </a>
+            <a href="/reports/period" class="ops-tile">
+                <span class="ops-kicker">Lapor</span>
+                <span class="ops-title">Ringkas &amp; export periode</span>
+                <span class="ops-hint">Preview cetak + CSV untuk arsip/SPT</span>
+            </a>
+        </div>
+        <div class="section-label">Alat pendukung</div>
+        <div class="row g-2 action-grid">
+            <div class="col-lg-3 col-sm-4 col-6">
+                <a href="/calculator" class="btn btn-outline-copper btn-action w-100">
+                    <i class="bi bi-calculator" aria-hidden="true"></i>
+                    <span class="small">Kalkulator</span>
+                </a>
             </div>
-            <div class="card-body">
-                {% if chart_max and chart_max > 0 %}
-                <div class="chart-wrap mb-3" aria-label="Grafik PPh per bulan">
-                    {% for c in chart %}
-                    <div class="chart-col" title="{{ c.label }}: Rp {{ '{:,.0f}'.format(c.total) }}">
-                        {% if c.total > 0 %}
-                        <div class="chart-value">{{ "{:,.0f}".format(c.total / 1000000) }}jt</div>
-                        <div class="chart-bar" style="height: {{ c.pct }}%;"></div>
-                        {% else %}
-                        <div class="chart-bar is-empty"></div>
-                        {% endif %}
-                        <div class="chart-label">{{ c.label }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if yearly %}
-                <div class="table-responsive">
-                    <table class="table table-custom table-buku-masa">
-                        <thead>
-                            <tr>
-                                <th>Bulan</th>
-                                <th>Jenis</th>
-                                <th>Jumlah</th>
-                                <th class="text-end">Total PPh</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% set months = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'Mei',6:'Jun',7:'Jul',8:'Agu',9:'Sep',10:'Okt',11:'Nov',12:'Des'} %}
-                            {% set labels = {'pph23':'PPh 23','pph26':'PPh 26','pph_final':'PPh Final','pph21':'PPh 21'} %}
-                            {% for r in yearly %}
-                            <tr>
-                                <td><span class="tax-chip">{{ months[r.tax_month] }}</span></td>
-                                <td><span class="tax-chip {{ r.tax_code }}">{{ labels.get(r.tax_code, r.tax_code) }}</span></td>
-                                <td>{{ r.count }}</td>
-                                <td class="table-money">Rp {{ "{:,.0f}".format(r.total_tax) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="empty-state">
+            <div class="col-lg-3 col-sm-4 col-6">
+                <a href="/documents" class="btn btn-outline-copper btn-action w-100">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <span class="small">Dokumen ({{ dash.doc_count }})</span>
+                </a>
+            </div>
+            <div class="col-lg-3 col-sm-4 col-6">
+                <a href="/calendar" class="btn btn-outline-copper btn-action w-100">
+                    <i class="bi bi-calendar3" aria-hidden="true"></i>
+                    <span class="small">Kalender deadline</span>
+                </a>
+            </div>
+            <div class="col-lg-3 col-sm-4 col-6">
+                <a href="/reports/period" class="btn btn-outline-copper btn-action w-100">
                     <i class="bi bi-bar-chart" aria-hidden="true"></i>
-                    <div class="empty-title">Belum ada beban PPh tahun ini</div>
-                    <p>Langkah berikutnya untuk masa berjalan: catat potongan vendor atau input payroll PPh 21.</p>
-                    <a href="/withholding" class="btn btn-copper btn-sm">Catat potongan</a>
-                    <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Input PPh 21</a>
-                </div>
-                {% endif %}
+                    <span class="small">Laporan detail</span>
+                </a>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Ops rail: decision paths, not generic icon grid -->
-<div class="mt-4">
-    <div class="section-label">Alur kerja periode ini</div>
-    <div class="ops-rail mb-3">
-        <a href="/withholding" class="ops-tile primary">
-            <span class="ops-kicker">Catat</span>
-            <span class="ops-title">Potongan PPh 23/26/Final</span>
-            <span class="ops-hint">Vendor, jasa, sewa — masuk ke rekonsiliasi masa</span>
-        </a>
-        <a href="/pph21" class="ops-tile">
-            <span class="ops-kicker">Payroll</span>
-            <span class="ops-title">Log PPh 21 pegawai</span>
-            <span class="ops-hint">Input gaji bruto + PTKP, total otomatis</span>
-        </a>
-        <a href="/reports/period" class="ops-tile">
-            <span class="ops-kicker">Lapor</span>
-            <span class="ops-title">Ringkas &amp; export periode</span>
-            <span class="ops-hint">Preview cetak + CSV untuk arsip/SPT</span>
-        </a>
-    </div>
-    <div class="section-label">Alat pendukung</div>
-    <div class="row g-2 action-grid">
-        <div class="col-lg-3 col-sm-4 col-6">
-            <a href="/calculator" class="btn btn-outline-copper btn-action w-100">
-                <i class="bi bi-calculator" aria-hidden="true"></i>
-                <span class="small">Kalkulator</span>
-            </a>
-        </div>
-        <div class="col-lg-3 col-sm-4 col-6">
-            <a href="/documents" class="btn btn-outline-copper btn-action w-100">
-                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-                <span class="small">Dokumen ({{ dash.doc_count }})</span>
-            </a>
-        </div>
-        <div class="col-lg-3 col-sm-4 col-6">
-            <a href="/calendar" class="btn btn-outline-copper btn-action w-100">
-                <i class="bi bi-calendar3" aria-hidden="true"></i>
-                <span class="small">Kalender deadline</span>
-            </a>
-        </div>
-        <div class="col-lg-3 col-sm-4 col-6">
-            <a href="/reports/period" class="btn btn-outline-copper btn-action w-100">
-                <i class="bi bi-bar-chart" aria-hidden="true"></i>
-                <span class="small">Laporan detail</span>
-            </a>
-        </div>
-    </div>
-</div>
+{% block extra_js %}
+{% if chart_max and chart_max > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    var ctx = document.getElementById('pphChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for m in range(1,13) %}'{{ month_labels[m] }}',{% endfor %}],
+            datasets: [
+                {
+                    label: 'Potongan',
+                    data: [{% for m in range(1,13) %}{{ chart_data_withholding[m] or 0 }},{% endfor %}],
+                    backgroundColor: '#3B4F6A',
+                    borderRadius: 4,
+                    barPercentage: 0.65,
+                },
+                {
+                    label: 'PPh 21',
+                    data: [{% for m in range(1,13) %}{{ chart_data_pph21[m] or 0 }},{% endfor %}],
+                    backgroundColor: '#4A6FA5',
+                    borderRadius: 4,
+                    barPercentage: 0.65,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': Rp ' + Number(ctx.raw).toLocaleString('id-ID');
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 }, color: '#6B7280' },
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E2E8F0' },
+                    ticks: {
+                        font: { size: 10 },
+                        color: '#6B7280',
+                        callback: function (v) {
+                            if (v >= 1000000) return (v / 1000000).toFixed(0) + 'jt';
+                            if (v >= 1000) return (v / 1000).toFixed(0) + 'rb';
+                            return v;
+                        },
+                    },
+                },
+            },
+        },
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

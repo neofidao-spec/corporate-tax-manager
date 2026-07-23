@@ -69,6 +69,24 @@ def create_app(testing=False):
         deadlines = g.db.get_upcoming_deadlines(days_ahead=deadline_window)
         yearly = g.db.get_yearly_summary(data['year'])
 
+        # ── Progress masa (alur): catat → PPh21 → setor → lapor ──
+        wh_count = data.get('total_withholding_count', 0) or 0
+        p21_count = data.get('total_pph21_count', 0) or 0
+        outstanding = data.get('outstanding_count', 0) or 0
+        steps_done = 0
+        if wh_count > 0:
+            steps_done += 1
+        if p21_count > 0:
+            steps_done += 1
+        if wh_count > 0 and p21_count > 0 and outstanding == 0:
+            steps_done += 1
+        progress_pct = min(steps_done * 33, 100)
+        progress_steps = [
+            {'label': 'Catat potongan', 'done': wh_count > 0},
+            {'label': 'Rekonsiliasi PPh 21', 'done': p21_count > 0},
+            {'label': 'Setor seluruhnya', 'done': wh_count > 0 and p21_count > 0 and outstanding == 0},
+        ]
+
         # Previous month comparison
         prev_m = month - 1 if month > 1 else 12
         prev_y = year if month > 1 else year - 1
@@ -100,6 +118,20 @@ def create_app(testing=False):
                 continue
         chart_max = max(month_totals.values()) if month_totals else 0
         chart = []
+        chart_data_withholding = {m: 0.0 for m in range(1, 13)}
+        chart_data_pph21 = {m: 0.0 for m in range(1, 13)}
+        for row in yearly or []:
+            try:
+                m = int(row.get('tax_month') or 0)
+                if 1 <= m <= 12:
+                    tc = (row.get('tax_code') or '').lower()
+                    v = float(row.get('total_tax') or 0)
+                    if tc == 'pph21':
+                        chart_data_pph21[m] += v
+                    else:
+                        chart_data_withholding[m] += v
+            except (TypeError, ValueError):
+                continue
         labels = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'Mei', 6: 'Jun',
                   7: 'Jul', 8: 'Agu', 9: 'Sep', 10: 'Okt', 11: 'Nov', 12: 'Des'}
         for m in range(1, 13):
@@ -115,16 +147,19 @@ def create_app(testing=False):
         # Period navigation
         next_m = month + 1 if month < 12 else 1
         next_y = year if month < 12 else year + 1
+        urgent = [d for d in (deadlines or []) if d.get('status') in ('LEWAT', 'SEGERA')]
 
         return render_template(
             'index.html',
             dash=data,
             deadlines=deadlines,
             deadline_window=deadline_window,
-            urgent_deadlines=[d for d in (deadlines or []) if d.get('status') in ('LEWAT', 'SEGERA')],
+            urgent_deadlines=urgent,
             yearly=yearly,
             chart=chart,
             chart_max=chart_max,
+            chart_data_withholding=chart_data_withholding,
+            chart_data_pph21=chart_data_pph21,
             selected_year=year,
             selected_month=month,
             prev_y=prev_y,
@@ -132,6 +167,8 @@ def create_app(testing=False):
             next_y=next_y,
             next_m=next_m,
             month_labels=labels,
+            progress_pct=progress_pct,
+            progress_steps=progress_steps,
             comparison=comparison,
         )
 

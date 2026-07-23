@@ -696,7 +696,7 @@ class TestWebApp(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         dash = self.client.get('/')
         self.assertEqual(dash.status_code, 200)
-        self.assertIn(b'Reminder deadline', dash.data)
+        self.assertIn(b'Deadline terdekat', dash.data)
         self.assertIn(b'Deadline Urgent UI', dash.data)
 
     def test_density_toggle_and_skeleton_markup(self):
@@ -950,7 +950,7 @@ class TestRemittanceStatus(unittest.TestCase):
         self.assertNotIn(b'FilterDash B', r_d.data)
         home = self.client.get('/')
         self.assertIn(b'Belum disetor', home.data)
-        self.assertIn(b'remit=tercatat', home.data)
+        self.assertIn(b'withholding', home.data)
         self.assertIn(b'v1.2.1', home.data)
 
 
