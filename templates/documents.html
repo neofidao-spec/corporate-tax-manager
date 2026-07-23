@@ -118,11 +118,11 @@
     {% endif %}
     {% else %}
     <div class="empty-state">
-        <i class="bi bi-folder2-open"></i>
-        <div class="empty-title">Belum ada dokumen</div>
-        <p>Belum ada dokumen pajak yang tercatat. Simpan SPT, faktur, atau bukti potong di sini.</p>
+        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+        <div class="empty-title">Arsip masa masih kosong</div>
+        <p>Langkah berikutnya: simpan bukti potong, SPT, atau kontrak yang menopang rekonsiliasi masa berjalan.</p>
         <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-            <i class="bi bi-plus-lg"></i> Tambah dokumen
+            Arsipkan dokumen pertama
         </button>
     </div>
     {% endif %}

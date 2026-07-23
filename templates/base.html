@@ -670,6 +670,61 @@
             border: 1px solid #C9DDF0;
         }
 
+
+        /* ── Lembar hitung (print-style worksheet) ── */
+        .result-box.lembar-hitung {
+            background:
+                linear-gradient(180deg, #FBFCFD 0%, var(--bg-elevated) 48%, #F7F9FC 100%);
+            border: 1px solid var(--border-strong);
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+        }
+        .result-box.lembar-hitung .result-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px dashed var(--border-strong);
+            padding-bottom: 0.45rem;
+            margin-bottom: 0.55rem;
+        }
+        .result-box.lembar-hitung .result-kicker {
+            margin-bottom: 0.15rem;
+        }
+        .result-box.lembar-hitung .result-title {
+            margin-bottom: 0.65rem;
+            font-size: 1.05rem;
+        }
+        .result-box.lembar-hitung .value-line {
+            padding: 0.28rem 0;
+            border-bottom: 1px dotted var(--border);
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        }
+        .result-box.lembar-hitung .value-line span:first-child {
+            color: var(--text-secondary);
+        }
+        .result-box.lembar-hitung .value-line.total {
+            margin-top: 0.35rem;
+            border-top: 2px solid var(--primary);
+            border-bottom: none;
+            padding-top: 0.55rem;
+            font-family: 'IBM Plex Serif', Georgia, serif;
+        }
+        .result-box.lembar-hitung .result-footnote {
+            margin-top: 0.65rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px dashed var(--border);
+            padding-top: 0.45rem;
+        }
+
         /* ── Tables ── */
         .table-custom {
             font-size: 0.9rem;
@@ -699,6 +754,64 @@
             text-align: right;
             font-variant-numeric: tabular-nums;
             font-weight: 600;
+        }
+
+        /* Buku masa — ledger-style ops table */
+        .table-buku-masa {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .table-buku-masa thead th {
+            background: linear-gradient(180deg, var(--surface-muted), #E8EEF4);
+            border-bottom: 2px solid var(--border-strong);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .table-buku-masa tbody tr:nth-child(even) {
+            background: rgba(244, 246, 248, 0.65);
+        }
+        .table-buku-masa tbody tr:hover {
+            background: var(--primary-soft) !important;
+        }
+        .table-buku-masa .col-sticky {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: var(--bg-elevated);
+            box-shadow: 1px 0 0 var(--border);
+            font-weight: 650;
+            min-width: 9rem;
+        }
+        .table-buku-masa thead th.col-sticky {
+            z-index: 3;
+            background: linear-gradient(180deg, var(--surface-muted), #E8EEF4);
+        }
+        .table-buku-masa tbody tr:nth-child(even) .col-sticky {
+            background: #F7F9FB;
+        }
+        .table-buku-masa tbody tr:hover .col-sticky {
+            background: var(--primary-soft);
+        }
+        .status-chip.posted {
+            background: var(--info-soft);
+            color: var(--info-text);
+            border-color: #C9DDF0;
+        }
+        .table-buku-masa .col-status {
+            white-space: nowrap;
+        }
+        [data-theme="dark"] .table-buku-masa tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.03);
+        }
+        [data-theme="dark"] .table-buku-masa .col-sticky,
+        [data-theme="dark"] .table-buku-masa tbody tr:nth-child(even) .col-sticky {
+            background: var(--bg-elevated);
+        }
+        [data-theme="dark"] .table-buku-masa thead th,
+        [data-theme="dark"] .table-buku-masa thead th.col-sticky {
+            background: var(--surface-muted);
         }
         .table-bordered { border-color: var(--border); }
         .table-bordered > :not(caption) > * > * {

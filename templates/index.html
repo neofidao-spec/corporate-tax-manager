@@ -168,10 +168,10 @@
                 </div>
                 {% else %}
                 <div class="empty-state compact py-4">
-                    <i class="bi bi-calendar-check"></i>
-                    <div class="empty-title">Tidak ada deadline dekat</div>
-                    <p class="mb-0">Tidak ada deadline dalam {{ deadline_window }} hari ke depan.</p>
-                    <a href="/calendar" class="btn btn-outline-copper btn-sm mt-2">Kelola kalender</a>
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                    <div class="empty-title">Tidak ada deadline dalam window ini</div>
+                    <p class="mb-0">Window {{ deadline_window }} hari bersih. Tetapkan jadwal setor jika ada kewajiban khusus.</p>
+                    <a href="/calendar" class="btn btn-outline-copper btn-sm mt-2">Atur jadwal setor</a>
                 </div>
                 {% endif %}
             </div>
@@ -206,7 +206,7 @@
 
                 {% if yearly %}
                 <div class="table-responsive">
-                    <table class="table table-custom">
+                    <table class="table table-custom table-buku-masa">
                         <thead>
                             <tr>
                                 <th>Bulan</th>
@@ -231,11 +231,11 @@
                 </div>
                 {% else %}
                 <div class="empty-state">
-                    <i class="bi bi-bar-chart"></i>
-                    <div class="empty-title">Belum ada tren PPh</div>
-                    <p>Belum ada data transaksi untuk tahun ini. Mulai dari log potongan atau PPh 21.</p>
+                    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                    <div class="empty-title">Belum ada beban PPh tahun ini</div>
+                    <p>Langkah berikutnya untuk masa berjalan: catat potongan vendor atau input payroll PPh 21.</p>
                     <a href="/withholding" class="btn btn-copper btn-sm">Catat potongan</a>
-                    <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Log PPh 21</a>
+                    <a href="/pph21" class="btn btn-outline-copper btn-sm ms-1">Input PPh 21</a>
                 </div>
                 {% endif %}
             </div>

@@ -76,14 +76,15 @@
     <div class="card-body p-0">
         {% if records %}
         <div class="table-responsive">
-            <table class="table table-custom mb-0">
+            <table class="table table-custom table-buku-masa mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Pegawai</th>
+                        <th class="col-sticky">Pegawai</th>
                         <th class="text-end">Gaji bruto</th>
                         <th>PTKP</th>
                         <th class="text-end">PPh 21</th>
+                        <th class="col-status">Status</th>
                         <th>Periode</th>
                         <th>Input</th>
                         <th></th>
@@ -93,7 +94,7 @@
                     {% for r in records %}
                     <tr>
                         <td class="text-muted">{{ r.id }}</td>
-                        <td class="fw-semibold">{{ r.employee_name }}</td>
+                        <td class="col-sticky">{{ r.employee_name }}</td>
                         <td class="table-money">Rp {{ "{:,.0f}".format(r.gross_salary) }}</td>
                         <td><span class="tax-chip">{{ r.ptkp_status }}</span></td>
                         <td class="table-money">
@@ -104,6 +105,7 @@
                                 {% endif %}
                             </div>
                         </td>
+                        <td class="col-status"><span class="status-chip posted">Tercatat</span></td>
                         <td><span class="tax-chip">{{ r.period_year }}-{{ "%02d"|format(r.period_month) }}</span></td>
                         <td><small class="text-muted">{{ r.created_at[:10] if r.created_at else '-' }}</small></td>
                         <td>
@@ -134,11 +136,11 @@
         {% endif %}
         {% else %}
         <div class="empty-state">
-            <i class="bi bi-people"></i>
-            <div class="empty-title">Belum ada log PPh 21</div>
-            <p>Belum ada data PPh 21. Tambah dari tombol di atas — PPh dihitung otomatis jika dikosongkan.</p>
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <div class="empty-title">Belum ada payroll PPh 21 untuk masa ini</div>
+            <p>Langkah berikutnya: input gaji bruto + PTKP pegawai. PPh dihitung otomatis bila dikosongkan, lalu masuk total masa.</p>
             <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="bi bi-plus-lg"></i> Tambah log PPh 21
+                Input log PPh 21 pertama
             </button>
         </div>
         {% endif %}

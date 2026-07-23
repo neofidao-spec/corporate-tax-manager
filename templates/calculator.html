@@ -100,10 +100,14 @@
             </div>
         </div>
         {% if calc_type.startswith('pph21') and results %}
-        <div class="result-box mt-3 is-sticky">
+        <div class="result-box lembar-hitung mt-3 is-sticky">
             <div class="result-kicker">Lembar hitung</div>
             <div class="result-title">
                 PPh 21 · {{ 'bukan pegawai' if 'non' in calc_type else 'pegawai tetap' }}
+            </div>
+            <div class="result-meta">
+                <span>Ref · {{ calc_type|upper }}</span>
+                <span>Siap disalin ke log payroll</span>
             </div>
             {% if result_summary %}
             <pre class="mb-2 small text-muted" style="white-space:pre-wrap;">{{ result_summary }}</pre>
@@ -123,6 +127,7 @@
             <div class="value-line"><span>Take Home Pay</span><span>Rp {{ "{:,.0f}".format(results.take_home_pay) }}</span></div>
             {% endif %}
             <div class="value-line"><span>Metode</span><span class="text-muted">{{ results.metode }}</span></div>
+            <div class="result-footnote">Angka ini referensi. Catat ke Log PPh 21 jika sudah final untuk masa berjalan.</div>
         </div>
         {% endif %}
     </div>
@@ -155,7 +160,9 @@
                     </div>
                 </form>
                 {% if calc_type == 'pph23' and results %}
-                <div class="result-box is-sticky">
+                <div class="result-box lembar-hitung is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-meta"><span>Ref · kalkulasi</span><span>Referensi cepat</span></div>
                     <div class="value-line"><span>Dasar Pengenaan</span><span>Rp {{ "{:,.0f}".format(results.dasar_pengenaan) }}</span></div>
                     <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
                     <div class="value-line total">
@@ -202,7 +209,9 @@
                     </div>
                 </form>
                 {% if calc_type == 'pph26' and results %}
-                <div class="result-box is-sticky">
+                <div class="result-box lembar-hitung is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-meta"><span>Ref · kalkulasi</span><span>Referensi cepat</span></div>
                     <div class="value-line"><span>Jenis Pajak</span><span>{{ results.jenis_pajak }}</span></div>
                     <div class="value-line"><span>Dasar Pengenaan</span><span>Rp {{ "{:,.0f}".format(results.dasar_pengenaan) }}</span></div>
                     <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
@@ -270,7 +279,9 @@
             </div>
         </div>
         {% if calc_type == 'ppn' and results %}
-        <div class="result-box mt-3 is-sticky">
+        <div class="result-box lembar-hitung mt-3 is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-meta"><span>Ref · kalkulasi</span><span>Referensi cepat</span></div>
             <div class="value-line"><span>{{ results.status }}</span><span></span></div>
             <div class="value-line"><span>DPP</span><span>Rp {{ "{:,.0f}".format(results.dpp) }}</span></div>
             <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>
@@ -281,7 +292,9 @@
             <div class="value-line"><span>Total (DPP + PPN)</span><span>Rp {{ "{:,.0f}".format(results.total) }}</span></div>
         </div>
         {% elif calc_type == 'ppn_impor' and results %}
-        <div class="result-box mt-3 is-sticky">
+        <div class="result-box lembar-hitung mt-3 is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-meta"><span>Ref · kalkulasi</span><span>Referensi cepat</span></div>
             <div class="value-line"><span>Nilai Impor</span><span>Rp {{ "{:,.0f}".format(results.nilai_impor) }}</span></div>
             <div class="value-line"><span>Bea Masuk</span><span>Rp {{ "{:,.0f}".format(results.bea_masuk) }}</span></div>
             <div class="value-line"><span>DPP</span><span>Rp {{ "{:,.0f}".format(results.dpp) }}</span></div>
@@ -315,7 +328,9 @@
                     </div>
                 </form>
                 {% if results and calc_type == 'pph_badan' %}
-                <div class="result-box is-sticky">
+                <div class="result-box lembar-hitung is-sticky">
+            <div class="result-kicker">Lembar hitung</div>
+            <div class="result-meta"><span>Ref · kalkulasi</span><span>Referensi cepat</span></div>
                     <div class="value-line"><span>Metode</span><span>{{ results.metode }}</span></div>
                     <div class="value-line"><span>Omzet</span><span>Rp {{ "{:,.0f}".format(results.dpp_omzet) }}</span></div>
                     <div class="value-line"><span>Laba Kena Pajak</span><span>Rp {{ "{:,.0f}".format(results.dpp_laba) }}</span></div>
@@ -441,9 +456,13 @@
 
         <!-- Unified result box for PPh Final + PPh 22 -->
         {% if results and (calc_type.startswith('pph_final') or calc_type == 'pph22_impor') %}
-        <div class="result-box mt-3 is-sticky">
+        <div class="result-box lembar-hitung mt-3 is-sticky">
             <div class="result-kicker">Lembar hitung</div>
             <div class="result-title">PPh Final / PPh 22</div>
+            <div class="result-meta">
+                <span>Ref · {{ calc_type|upper }}</span>
+                <span>Siap disalin ke log potongan</span>
+            </div>
             {% if calc_type == 'pph_final_sewa' %}
             <div class="value-line"><span>Objek</span><span>Sewa Tanah/Bangunan</span></div>
             <div class="value-line"><span>Tarif</span><span>{{ results.tarif }}</span></div>

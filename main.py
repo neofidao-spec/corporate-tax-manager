@@ -172,7 +172,9 @@ def paint_bar(widget, color=None):
 
 
 def section_label(text):
-    return make_label(text.upper(), 11, SUBTLE, True, 'left', 22)
+    # Eyebrow-style section label (tax-desk; matches web uppercase muted/accent kickers)
+    color = THEME.get('accent', SUBTLE) if isinstance(THEME, dict) else SUBTLE
+    return make_label(str(text).upper(), 11, color, True, 'left', 22)
 
 
 def accessible(widget, description, tag=True):
@@ -338,7 +340,7 @@ class DashboardScreen(BaseScreen):
 
         self.body.add_widget(section_label('Deadline masa'))
         if not deadlines:
-            self.body.add_widget(make_label('Tidak ada deadline dalam 45 hari', 12, SUBTLE, False, 'center', 28))
+            self.body.add_widget(make_label('Window 45 hari bersih — tetapkan jadwal setor bila perlu', 12, SUBTLE, False, 'center', 36))
         for item in deadlines[:6]:
             status = item.get('status', 'OK')
             color = ERROR if status == 'LEWAT' else (WARNING if status == 'SEGERA' else GREEN)
@@ -664,7 +666,8 @@ class WithholdingScreen(BaseScreen):
             icon = make_label('📋', 24, SUBTLE, False, 'center', 40)
             icon.halign = 'center'
             self.body.add_widget(icon)
-            self.body.add_widget(make_label('Belum ada transaksi', 14, SUBTLE, False, 'center', 50))
+            self.body.add_widget(make_label('Belum ada potongan di masa ini', 13, TEXT, True, 'center', 28))
+            self.body.add_widget(make_label('Langkah berikutnya: catat PPh 23/26/Final dari invoice vendor', 11, SUBTLE, False, 'center', 40))
             return
 
         self.body.add_widget(make_label(f'{total} transaksi', 12, SUBTLE, False, 'left', 20))
@@ -838,7 +841,8 @@ class Pph21Screen(BaseScreen):
             icon = make_label('👤', 24, SUBTLE, False, 'center', 40)
             icon.halign = 'center'
             self.body.add_widget(icon)
-            self.body.add_widget(make_label('Belum ada data PPh 21', 14, SUBTLE, False, 'center', 50))
+            self.body.add_widget(make_label('Belum ada payroll PPh 21 untuk filter ini', 13, TEXT, True, 'center', 28))
+            self.body.add_widget(make_label('Langkah berikutnya: input gaji bruto + PTKP pegawai', 11, SUBTLE, False, 'center', 40))
             return
 
         for row in rows:
@@ -1007,7 +1011,7 @@ class DocumentsScreen(BaseScreen):
             return
 
         if not docs:
-            msg = 'Tidak ada hasil pencarian' if self.search_query.strip() else 'Belum ada dokumen'
+            msg = 'Tidak ada hasil pencarian' if self.search_query.strip() else 'Arsip masa masih kosong — simpan bukti potong/SPT'
             icon = make_label('📁', 24, SUBTLE, False, 'center', 40)
             icon.halign = 'center'
             self.body.add_widget(icon)
@@ -1238,10 +1242,11 @@ class CalendarScreen(BaseScreen):
                 grid.add_widget(make_label(text_day, 10, color, True, 'center', 42))
         self.body.add_widget(grid)
 
-        self.body.add_widget(make_label('Deadline (bisa diedit)', 13, TEXT, True, 'left', 24))
+        self.body.add_widget(section_label('Jadwal setor'))
         if not reminders:
             self.body.add_widget(make_label('🗓', 24, SUBTLE, False, 'center', 40))
-            self.body.add_widget(make_label('Belum ada deadline custom', 12, SUBTLE, False, 'center', 50))
+            self.body.add_widget(make_label('Belum ada jadwal setor custom', 12, TEXT, True, 'center', 28))
+            self.body.add_widget(make_label('Tetapkan deadline berulang/sekali agar naik ke beranda', 11, SUBTLE, False, 'center', 36))
         for rem in reminders:
             row = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(6), padding=[dp(8), dp(4)])
             paint_card(row)
@@ -1404,7 +1409,7 @@ class ReportScreen(BaseScreen):
         self.view_month = date.today().month
 
     def build_ui(self):
-        self.body.add_widget(section_label('Periode laporan'))
+        self.body.add_widget(section_label('Arsip masa'))
         nav = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(6))
         prev_btn = make_button('<', SURFACE_MUTED, TEXT, 38)
         prev_btn.size_hint_x = None
@@ -1451,11 +1456,12 @@ class ReportScreen(BaseScreen):
             stats.add_widget(row)
         self.body.add_widget(stats)
 
-        self.body.add_widget(section_label('Rincian'))
+        self.body.add_widget(section_label('Buku masa · rincian'))
         details = summary.get('details') or []
         if not details:
             self.body.add_widget(make_label('📊', 24, SUBTLE, False, 'center', 40))
-            self.body.add_widget(make_label('Belum ada data periode ini', 12, SUBTLE, False, 'center', 50))
+            self.body.add_widget(make_label('Belum ada beban PPh di masa ini', 12, TEXT, True, 'center', 28))
+            self.body.add_widget(make_label('Catat potongan atau input PPh 21, lalu export arsip', 11, SUBTLE, False, 'center', 36))
             return
 
         labels = {

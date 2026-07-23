@@ -69,15 +69,16 @@
     <div class="card-body p-0">
         {% if records %}
         <div class="table-responsive">
-            <table class="table table-custom mb-0">
+            <table class="table table-custom table-buku-masa mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Vendor</th>
+                        <th class="col-sticky">Vendor</th>
                         <th class="text-end">Bruto</th>
                         <th>Objek</th>
                         <th>Jenis PPh</th>
                         <th class="text-end">PPh dipotong</th>
+                        <th class="col-status">Status</th>
                         <th>Keterangan</th>
                         <th>Tgl</th>
                         <th></th>
@@ -87,7 +88,7 @@
                     {% for r in records %}
                     <tr>
                         <td class="text-muted">{{ r.id }}</td>
-                        <td class="fw-semibold">{{ r.vendor }}</td>
+                        <td class="col-sticky">{{ r.vendor }}</td>
                         <td class="table-money">Rp {{ "{:,.0f}".format(r.amount) }}</td>
                         <td><span class="tax-chip">{{ r.obj_type }}</span></td>
                         <td>
@@ -102,6 +103,7 @@
                                 {% endif %}
                             </div>
                         </td>
+                        <td class="col-status"><span class="status-chip posted">Tercatat</span></td>
                         <td><small class="text-muted">{{ r.description[:40] if r.description else '-' }}</small></td>
                         <td><small class="text-muted">{{ r.created_at[:10] }}</small></td>
                         <td>
@@ -133,11 +135,11 @@
         {% endif %}
         {% else %}
         <div class="empty-state">
-            <i class="bi bi-inbox"></i>
-            <div class="empty-title">Belum ada potongan PPh</div>
-            <p>Belum ada data transaksi potongan. Catat PPh 23/26/Final untuk memulai rekonsiliasi.</p>
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <div class="empty-title">Belum ada potongan di masa ini</div>
+            <p>Langkah berikutnya: catat PPh 23/26/Final dari invoice vendor agar masuk rekonsiliasi masa dan laporan.</p>
             <button class="btn btn-copper" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="bi bi-plus-lg"></i> Tambah potongan pertama
+                Catat potongan pertama
             </button>
         </div>
         {% endif %}
