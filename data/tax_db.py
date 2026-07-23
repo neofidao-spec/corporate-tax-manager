@@ -230,7 +230,8 @@ class TaxDB:
     def get_all_withholding(self, limit: int = 100, offset: int = 0,
                             year: Optional[int] = None,
                             month: Optional[int] = None,
-                            tax_code: Optional[str] = None) -> Tuple[List[Dict], int]:
+                            tax_code: Optional[str] = None,
+                            remit: Optional[str] = None) -> Tuple[List[Dict], int]:
         conn = self._conn()
         cursor = conn.cursor()
 
@@ -245,6 +246,11 @@ class TaxDB:
         if tax_code:
             conditions.append("tax_code = ?")
             params.append(tax_code)
+        if remit:
+            r = str(remit).strip().lower()
+            if r in ('tercatat', 'disetor'):
+                conditions.append("COALESCE(remittance_status, 'tercatat') = ?")
+                params.append(r)
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -400,7 +406,8 @@ class TaxDB:
     def get_pph21_log(self, limit: int = 100, offset: int = 0,
                       year: Optional[int] = None,
                       month: Optional[int] = None,
-                      q: Optional[str] = None) -> Tuple[List[Dict], int]:
+                      q: Optional[str] = None,
+                      remit: Optional[str] = None) -> Tuple[List[Dict], int]:
         conn = self._conn()
         cursor = conn.cursor()
         conditions = []
@@ -414,6 +421,11 @@ class TaxDB:
         if q:
             conditions.append('employee_name LIKE ?')
             params.append(f'%{q.strip()}%')
+        if remit:
+            r = str(remit).strip().lower()
+            if r in ('tercatat', 'disetor'):
+                conditions.append("COALESCE(remittance_status, 'tercatat') = ?")
+                params.append(r)
         where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
         cursor.execute(f'SELECT COUNT(*) FROM pph21_log {where}', params)
         total = cursor.fetchone()[0]
@@ -948,6 +960,27 @@ class TaxDB:
         total_pph21_year = float(cursor.fetchone()[0] or 0)
         total_year = total_withholding_year + total_pph21_year
 
+        # Outstanding remittance (belum disetor) for selected period
+        cursor.execute("""
+            SELECT COUNT(*), COALESCE(SUM(pph_amount), 0) FROM withholding
+            WHERE tax_year = ? AND tax_month = ?
+              AND COALESCE(remittance_status, 'tercatat') != 'disetor'
+        """, (year, month))
+        wh_out = cursor.fetchone()
+        outstanding_withholding_count = int(wh_out[0] or 0)
+        outstanding_withholding_amount = float(wh_out[1] or 0)
+
+        cursor.execute("""
+            SELECT COUNT(*), COALESCE(SUM(pph21_amount), 0) FROM pph21_log
+            WHERE period_year = ? AND period_month = ?
+              AND COALESCE(remittance_status, 'tercatat') != 'disetor'
+        """, (year, month))
+        p21_out = cursor.fetchone()
+        outstanding_pph21_count = int(p21_out[0] or 0)
+        outstanding_pph21_amount = float(p21_out[1] or 0)
+        outstanding_count = outstanding_withholding_count + outstanding_pph21_count
+        outstanding_amount = outstanding_withholding_amount + outstanding_pph21_amount
+
         # Document counts
         cursor.execute("SELECT COUNT(*) FROM documents")
         doc_count = cursor.fetchone()[0]
@@ -981,6 +1014,12 @@ class TaxDB:
             'total_withholding_year': total_withholding_year,
             'total_pph21_month': total_pph21_month,
             'total_pph21_year': total_pph21_year,
+            'outstanding_count': outstanding_count,
+            'outstanding_amount': outstanding_amount,
+            'outstanding_withholding_count': outstanding_withholding_count,
+            'outstanding_withholding_amount': outstanding_withholding_amount,
+            'outstanding_pph21_count': outstanding_pph21_count,
+            'outstanding_pph21_amount': outstanding_pph21_amount,
             'doc_count': doc_count,
             'doc_by_status': doc_by_status,
             'by_type': by_type,

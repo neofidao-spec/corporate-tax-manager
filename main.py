@@ -249,6 +249,8 @@ class DashboardScreen(BaseScreen):
         self.body.add_widget(make_label('Fokus: catat → rekonsiliasi → setor', 11, SUBTLE, False, 'left', 20))
 
         total_month = total_year = doc_count = pph21_month = 0.0
+        outstanding_amount = 0.0
+        outstanding_count = 0
         data = {}
         try:
             data = TaxDB().get_dashboard_data(year=now.year, month=now.month)
@@ -256,6 +258,8 @@ class DashboardScreen(BaseScreen):
             total_year = float(data.get('total_year', 0) or 0)
             doc_count = int(data.get('doc_count', 0) or 0)
             pph21_month = float(data.get('total_pph21_month', 0) or 0)
+            outstanding_amount = float(data.get('outstanding_amount', 0) or 0)
+            outstanding_count = int(data.get('outstanding_count', 0) or 0)
         except Exception:
             pass
 
@@ -300,8 +304,8 @@ class DashboardScreen(BaseScreen):
         for title, value in [
             ('Total Tahun', f'Rp {total_year:,.0f}'),
             ('PPh 21 Bulan', f'Rp {pph21_month:,.0f}'),
-            ('Dokumen', str(doc_count)),
-            ('Deadline 45 hr', f'{len(urgent)} urgent' if urgent else 'Aman'),
+            ('Belum disetor', f'Rp {outstanding_amount:,.0f}' if outstanding_count else 'Lunas'),
+            ('Baris outstanding', str(outstanding_count) if outstanding_count else '0'),
         ]:
             card = BoxLayout(orientation='vertical', padding=[dp(10), dp(8)], spacing=dp(2), size_hint_y=None, height=dp(68))
             paint_card(card)

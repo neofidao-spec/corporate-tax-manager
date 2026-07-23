@@ -709,7 +709,7 @@ class TestWebApp(unittest.TestCase):
         self.assertIn(b'is-loading', r.data)
         self.assertIn(b'ctm_density', r.data)
         self.assertIn(b'app-content-ready', r.data)
-        self.assertIn(b'v1.2.0', r.data)
+        self.assertIn(b'v1.2.1', r.data)
 
     def test_accessibility_landmarks(self):
         r = self.client.get('/')
@@ -756,7 +756,7 @@ class TestWebApp(unittest.TestCase):
             nested = os.path.join(td, 'nested', 'ctm_prefs.json')
             self.assertTrue(save_prefs({'x': 1}, path=nested))
             self.assertEqual(load_prefs(path=nested).get('x'), 1)
-        self.assertEqual(APP_VERSION, '1.2.0')
+        self.assertEqual(APP_VERSION, '1.2.1')
 
     def test_export_utils_pph21_csv(self):
         from data.export_utils import (
@@ -924,6 +924,35 @@ class TestRemittanceStatus(unittest.TestCase):
         self.assertIn(b'@media print', r.data)
         self.assertIn(b'status-chip.disetor', r.data)
 
+
+
+
+    def test_remit_filter_and_dashboard_outstanding(self):
+        # unique vendors
+        self.client.post('/withholding/add', data={
+            'vendor': 'FilterDash A', 'amount': 80000000, 'obj_type': 'Jasa',
+            'tax_code': 'pph23', 'tariff': '2%', 'description': 'a',
+        }, follow_redirects=True)
+        self.client.post('/withholding/add', data={
+            'vendor': 'FilterDash B', 'amount': 90000000, 'obj_type': 'Jasa',
+            'tax_code': 'pph23', 'tariff': '2%', 'description': 'b',
+        }, follow_redirects=True)
+        import re
+        r = self.client.get('/withholding')
+        m = re.search(rb'<td class="text-muted">(\d+)</td>\s*<td class="col-sticky">FilterDash A</td>', r.data)
+        self.assertIsNotNone(m)
+        rid = int(m.group(1))
+        self.client.post(f'/withholding/{rid}/remit', follow_redirects=True)
+        r_t = self.client.get('/withholding?remit=tercatat')
+        self.assertIn(b'FilterDash B', r_t.data)
+        self.assertNotIn(b'FilterDash A', r_t.data)
+        r_d = self.client.get('/withholding?remit=disetor')
+        self.assertIn(b'FilterDash A', r_d.data)
+        self.assertNotIn(b'FilterDash B', r_d.data)
+        home = self.client.get('/')
+        self.assertIn(b'Belum disetor', home.data)
+        self.assertIn(b'remit=tercatat', home.data)
+        self.assertIn(b'v1.2.1', home.data)
 
 
 if __name__ == '__main__':

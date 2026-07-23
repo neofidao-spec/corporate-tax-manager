@@ -5,6 +5,18 @@ Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/),
 dan proyek memakai [Semantic Versioning](https://semver.org/lang/id/).
 
+## [1.2.1] — 2026-07-23
+
+### Tax-desk remittance ops
+- Filter list potongan/PPh 21 by status setor (`?remit=tercatat|disetor`)
+- Dashboard ringkasan **belum disetor** (count + amount) + deep-link ke filter
+- Remittance status toggle (tercatat ↔ disetor) retained from 1.2.x slice
+- Density compact for lembar hitung + buku masa; print CSS lembar hitung
+- Export CSV includes Status Setor; filter preserved on export/toggle
+
+### Changed
+- `APP_VERSION` / buildozer / footer → `1.2.1`
+
 ## [1.2.0] — 2026-07-23
 
 ### UX Polish — Professional Tax Dashboard Release

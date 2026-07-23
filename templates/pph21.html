@@ -67,6 +67,14 @@
             <input type="number" name="month" class="form-control form-control-sm" style="width:80px;" min="1" max="12" value="{{ month or '' }}">
         </div>
         <div class="col-auto">
+            <label class="form-label">Status setor</label>
+            <select name="remit" class="form-select form-select-sm" aria-label="Status setor">
+                <option value="">Semua</option>
+                <option value="tercatat" {% if remit == 'tercatat' %}selected{% endif %}>Belum disetor</option>
+                <option value="disetor" {% if remit == 'disetor' %}selected{% endif %}>Sudah disetor</option>
+            </select>
+        </div>
+        <div class="col-auto">
             <button class="btn btn-sm btn-copper"><i class="bi bi-funnel"></i> Filter</button>
         </div>
     </form>
@@ -111,6 +119,7 @@
                                 {% if year %}<input type="hidden" name="year" value="{{ year }}">{% endif %}
                                 {% if month %}<input type="hidden" name="month" value="{{ month }}">{% endif %}
                                 {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                                {% if remit %}<input type="hidden" name="remit" value="{{ remit }}">{% endif %}
                                 <button type="submit" class="remit-toggle" title="Klik untuk ubah status setor"
                                         aria-label="Ubah status setor {{ r.employee_name }}">
                                     <span class="status-chip {{ 'disetor' if st == 'disetor' else 'tercatat' }}">
@@ -140,7 +149,7 @@
                 <ul class="pagination pagination-sm mb-0">
                     {% for p in range(1, total_pages + 1) %}
                     <li class="page-item {{ 'active' if p == page }}">
-                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if remit %}&remit={{ remit }}{% endif %}">{{ p }}</a>
                     </li>
                     {% endfor %}
                 </ul>

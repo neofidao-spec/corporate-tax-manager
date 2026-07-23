@@ -12,6 +12,7 @@
         {% if year %}{% set _ = qs.append('year=' ~ year) %}{% endif %}
         {% if month %}{% set _ = qs.append('month=' ~ month) %}{% endif %}
         {% if tax_code %}{% set _ = qs.append('tax_code=' ~ tax_code) %}{% endif %}
+        {% if remit %}{% set _ = qs.append('remit=' ~ remit) %}{% endif %}
         {% set filter_qs = qs|join('&') %}
         <a href="/withholding/print{% if filter_qs %}?{{ filter_qs }}{% endif %}"
            class="btn btn-outline-copper" target="_blank">
@@ -26,7 +27,7 @@
     </div>
 </div>
 
-{% if year or month or tax_code %}
+{% if year or month or tax_code or remit %}
 <div class="filter-active-banner">
     <div>
         <i class="bi bi-funnel me-1" aria-hidden="true"></i>
@@ -35,6 +36,7 @@
         {% if tax_code %}<strong>{{ labels.get(tax_code, tax_code) }}</strong>{% endif %}
         {% if year %} · Tahun <strong>{{ year }}</strong>{% endif %}
         {% if month %} · Bulan <strong>{{ month }}</strong>{% endif %}
+        {% if remit %} · Status <strong>{{ 'Belum disetor' if remit == 'tercatat' else 'Sudah disetor' }}</strong>{% endif %}
         — export/print memakai filter ini
     </div>
     <a href="/withholding" class="btn btn-sm btn-outline-copper">Hapus filter</a>
@@ -57,6 +59,13 @@
         </div>
         <div class="col-auto">
             <input type="number" name="month" class="form-control form-control-sm" placeholder="Bulan" value="{{ month or '' }}" style="width: 80px;" min="1" max="12">
+        </div>
+        <div class="col-auto">
+            <select name="remit" class="form-select form-select-sm" aria-label="Status setor">
+                <option value="">Semua status setor</option>
+                <option value="tercatat" {% if remit == 'tercatat' %}selected{% endif %}>Belum disetor</option>
+                <option value="disetor" {% if remit == 'disetor' %}selected{% endif %}>Sudah disetor</option>
+            </select>
         </div>
         <div class="col-auto">
             <button class="btn btn-sm btn-copper"><i class="bi bi-funnel"></i> Filter</button>
@@ -109,6 +118,7 @@
                                 {% if year %}<input type="hidden" name="year" value="{{ year }}">{% endif %}
                                 {% if month %}<input type="hidden" name="month" value="{{ month }}">{% endif %}
                                 {% if tax_code %}<input type="hidden" name="tax_code" value="{{ tax_code }}">{% endif %}
+                                {% if remit %}<input type="hidden" name="remit" value="{{ remit }}">{% endif %}
                                 <button type="submit" class="remit-toggle" title="Klik untuk ubah status setor"
                                         aria-label="Ubah status setor {{ r.vendor }}">
                                     <span class="status-chip {{ 'disetor' if st == 'disetor' else 'tercatat' }}">
@@ -139,7 +149,7 @@
                 <ul class="pagination pagination-sm">
                     {% for p in range(1, total_pages + 1) %}
                     <li class="page-item {{ 'active' if p == page }}">
-                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if tax_code %}&tax_code={{ tax_code }}{% endif %}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}{% if year %}&year={{ year }}{% endif %}{% if month %}&month={{ month }}{% endif %}{% if tax_code %}&tax_code={{ tax_code }}{% endif %}{% if remit %}&remit={{ remit }}{% endif %}">{{ p }}</a>
                     </li>
                     {% endfor %}
                 </ul>

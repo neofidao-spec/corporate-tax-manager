@@ -237,15 +237,26 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         tax_code = request.args.get('tax_code')
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
 
         records, total = g.db.get_all_withholding(
             limit=per_page, offset=(page - 1) * per_page,
-            year=year, month=month, tax_code=tax_code,
+            year=year, month=month, tax_code=tax_code, remit=remit,
         )
         total_pages = max(1, (total + per_page - 1) // per_page)
-        return render_template('withholding.html', records=records,
-                               page=page, total_pages=total_pages,
-                               total=total, year=year, month=month, tax_code=tax_code)
+        return render_template(
+            'withholding.html',
+            records=records,
+            page=page,
+            total_pages=total_pages,
+            total=total,
+            year=year,
+            month=month,
+            tax_code=tax_code,
+            remit=remit,
+        )
 
     @app.route('/withholding/add', methods=['POST'])
     def add_withholding():
@@ -308,12 +319,16 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         q = (request.args.get('q') or '').strip() or None
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
         records, total = g.db.get_pph21_log(
             limit=per_page,
             offset=(page - 1) * per_page,
             year=year,
             month=month,
             q=q,
+            remit=remit,
         )
         total_pages = max(1, (total + per_page - 1) // per_page)
         year_total = g.db.get_total_pph21(year) if year else g.db.get_total_pph21(date.today().year)
@@ -326,6 +341,7 @@ def create_app(testing=False):
             year=year,
             month=month,
             q=q or '',
+            remit=remit,
             year_total=year_total,
             now=date.today(),
         )
@@ -389,7 +405,8 @@ def create_app(testing=False):
         year = request.form.get('year') or request.args.get('year')
         month = request.form.get('month') or request.args.get('month')
         q = request.form.get('q') or request.args.get('q')
-        return redirect(url_for('pph21_log', year=year, month=month, q=q))
+        remit = request.form.get('remit') or request.args.get('remit')
+        return redirect(url_for('pph21_log', year=year, month=month, q=q, remit=remit))
 
     @app.route('/pph21/export')
     def export_pph21():
@@ -397,8 +414,11 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         q = (request.args.get('q') or '').strip() or None
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
         records, _ = g.db.get_pph21_log(
-            limit=10000, offset=0, year=year, month=month, q=q,
+            limit=10000, offset=0, year=year, month=month, q=q, remit=remit,
         )
         return Response(
             render_csv(pph21_csv_rows(records)),
@@ -411,8 +431,11 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         q = (request.args.get('q') or '').strip() or None
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
         records, total = g.db.get_pph21_log(
-            limit=10000, offset=0, year=year, month=month, q=q,
+            limit=10000, offset=0, year=year, month=month, q=q, remit=remit,
         )
         bruto_total = sum(float(r.get('gross_salary') or 0) for r in records)
         pph_total = sum(float(r.get('pph21_amount') or 0) for r in records)
@@ -423,6 +446,8 @@ def create_app(testing=False):
             filter_bits.append(f'Bulan {month}')
         if q:
             filter_bits.append(f'Cari: {q}')
+        if remit:
+            filter_bits.append('Belum disetor' if remit == 'tercatat' else 'Sudah disetor')
         filter_summary = ' · '.join(filter_bits) if filter_bits else 'Semua periode'
         return render_template(
             'print_pph21.html',
@@ -524,8 +549,11 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         tax_code = request.args.get('tax_code')
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
         records, _ = g.db.get_all_withholding(
-            limit=10000, year=year, month=month, tax_code=tax_code,
+            limit=10000, year=year, month=month, tax_code=tax_code, remit=remit,
         )
         return Response(
             render_csv(withholding_csv_rows(records)),
@@ -642,8 +670,11 @@ def create_app(testing=False):
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
         tax_code = request.args.get('tax_code')
+        remit = (request.args.get('remit') or '').strip().lower() or None
+        if remit not in (None, 'tercatat', 'disetor'):
+            remit = None
         records, total = g.db.get_all_withholding(
-            limit=10000, year=year, month=month, tax_code=tax_code,
+            limit=10000, year=year, month=month, tax_code=tax_code, remit=remit,
         )
         grand_total = sum(float(r.get('pph_amount') or 0) for r in records)
         bruto_total = sum(float(r.get('amount') or 0) for r in records)
