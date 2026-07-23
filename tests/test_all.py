@@ -885,5 +885,46 @@ class TestWebApp(unittest.TestCase):
             self.assertFalse(result2['copied'])
 
 
+class TestRemittanceStatus(unittest.TestCase):
+    def setUp(self):
+        from web_app import create_app
+        self.app = create_app(testing=True)
+        self.client = self.app.test_client()
+
+    def test_withholding_remittance_toggle_and_export(self):
+        r = self.client.post('/withholding/add', data={
+            'vendor': 'Remit Unit Vendor',
+            'amount': 50000000,
+            'obj_type': 'Jasa',
+            'tax_code': 'pph23',
+            'tariff': '2%',
+            'description': 'unit',
+        }, follow_redirects=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'Remit Unit Vendor', r.data)
+        # extract id
+        import re
+        m = re.search(rb'<td class="text-muted">(\d+)</td>\s*<td class="col-sticky">Remit Unit Vendor</td>', r.data)
+        self.assertIsNotNone(m)
+        rid = int(m.group(1))
+        r2 = self.client.post(f'/withholding/{rid}/remit', follow_redirects=True)
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn(b'Disetor', r2.data)
+        # export header
+        exp = self.client.get('/withholding/export')
+        self.assertEqual(exp.status_code, 200)
+        self.assertIn(b'Status Setor', exp.data)
+        self.assertIn(b'Disetor', exp.data)
+
+    def test_density_and_print_css_markers(self):
+        r = self.client.get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'body.density-compact .table-buku-masa', r.data)
+        self.assertIn(b'body.density-compact .result-box.lembar-hitung', r.data)
+        self.assertIn(b'@media print', r.data)
+        self.assertIn(b'status-chip.disetor', r.data)
+
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

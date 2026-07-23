@@ -672,11 +672,31 @@ class WithholdingScreen(BaseScreen):
 
         self.body.add_widget(make_label(f'{total} transaksi', 12, SUBTLE, False, 'left', 20))
         for row in rows:
-            card = BoxLayout(size_hint_y=None, height=dp(48), padding=[dp(10), dp(6)], spacing=dp(8))
+            card = BoxLayout(size_hint_y=None, height=dp(52), padding=[dp(10), dp(6)], spacing=dp(6))
             paint_card(card)
-            left = f"{row.get('vendor', '-')} ({row.get('obj_type', '-')})"
-            card.add_widget(make_label(left, 12, TEXT, True, 'left'))
-            card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right'))
+            st = str(row.get('remittance_status') or 'tercatat').lower()
+            st_label = 'Disetor' if st == 'disetor' else 'Tercatat'
+            st_color = GREEN if st == 'disetor' else ACCENT
+            left = f"{row.get('vendor', '-')} ({row.get('obj_type', '-')})\n{st_label}"
+            card.add_widget(make_label(left, 11, TEXT, True, 'left', 42))
+            card.add_widget(make_label(f"Rp {float(row.get('pph_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right', 42))
+            # Toggle remittance status
+            rid = row.get('id')
+            remit_btn = make_button('Setor' if st != 'disetor' else 'Batal', st_color, WHITE if st == 'disetor' else TEXT, 32)
+            def make_remit_cb(rid):
+                def cb(_b):
+                    try:
+                        TaxDB().toggle_withholding_remittance(rid)
+                        self.show_toast('Status setor diperbarui') if hasattr(self, 'show_toast') else None
+                    except Exception:
+                        try:
+                            App.get_running_app().root.show_toast('Status setor diperbarui')
+                        except Exception:
+                            pass
+                    Clock.schedule_once(lambda _dt: self.on_enter())
+                return cb
+            remit_btn.bind(on_release=make_remit_cb(rid))
+            card.add_widget(remit_btn)
             # Delete button with confirm
             del_btn = make_button('✕', ERROR, WHITE, 32)
             rid = row.get('id')
@@ -846,12 +866,31 @@ class Pph21Screen(BaseScreen):
             return
 
         for row in rows:
-            card = BoxLayout(size_hint_y=None, height=dp(52), padding=[dp(10), dp(6)], spacing=dp(6))
+            card = BoxLayout(size_hint_y=None, height=dp(56), padding=[dp(10), dp(6)], spacing=dp(6))
             paint_card(card)
+            st = str(row.get('remittance_status') or 'tercatat').lower()
+            st_label = 'Disetor' if st == 'disetor' else 'Tercatat'
+            st_color = GREEN if st == 'disetor' else ACCENT
             left = f"{row.get('employee_name', '-')} · {row.get('ptkp_status', '-')}"
-            period = f"{row.get('period_year')}-{int(row.get('period_month') or 0):02d}"
-            card.add_widget(make_label(f'{left}\n{period}', 11, TEXT, True, 'left', 42))
-            card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right', 42))
+            period = f"{row.get('period_year')}-{int(row.get('period_month') or 0):02d} · {st_label}"
+            card.add_widget(make_label(f'{left}\n{period}', 11, TEXT, True, 'left', 44))
+            card.add_widget(make_label(f"Rp {float(row.get('pph21_amount', 0) or 0):,.0f}", 12, TEXT, True, 'right', 44))
+            rid = row.get('id')
+            remit_btn = make_button('Setor' if st != 'disetor' else 'Batal', st_color, WHITE if st == 'disetor' else TEXT, 32)
+            def make_remit_cb21(rid):
+                def cb(_b):
+                    try:
+                        TaxDB().toggle_pph21_remittance(rid)
+                    except Exception:
+                        pass
+                    try:
+                        App.get_running_app().root.show_toast('Status setor diperbarui')
+                    except Exception:
+                        pass
+                    Clock.schedule_once(lambda _dt: self.on_enter())
+                return cb
+            remit_btn.bind(on_release=make_remit_cb21(rid))
+            card.add_widget(remit_btn)
             # Delete button with confirm
             del_btn = make_button('✕', ERROR, WHITE, 32)
             rid = row.get('id')

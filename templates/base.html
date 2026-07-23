@@ -794,10 +794,24 @@
         .table-buku-masa tbody tr:hover .col-sticky {
             background: var(--primary-soft);
         }
-        .status-chip.posted {
+        .status-chip.posted, .status-chip.tercatat {
             background: var(--info-soft);
             color: var(--info-text);
             border-color: #C9DDF0;
+        }
+        .status-chip.disetor {
+            background: var(--success-soft);
+            color: var(--success-text);
+            border-color: #C6E6D4;
+        }
+        .remit-toggle {
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+        }
+        .remit-toggle:hover .status-chip {
+            box-shadow: var(--focus-ring);
         }
         .table-buku-masa .col-status {
             white-space: nowrap;
@@ -1306,6 +1320,39 @@
         body.density-compact .result-box {
             padding: 0.8rem 0.9rem;
         }
+        body.density-compact .result-box.lembar-hitung {
+            padding: 0.7rem 0.8rem;
+            font-size: 0.84rem;
+        }
+        body.density-compact .result-box.lembar-hitung .result-title {
+            font-size: 0.95rem;
+            margin-bottom: 0.4rem;
+        }
+        body.density-compact .result-box.lembar-hitung .result-meta {
+            margin-bottom: 0.4rem;
+            padding-bottom: 0.3rem;
+            font-size: 0.66rem;
+        }
+        body.density-compact .result-box.lembar-hitung .value-line {
+            padding: 0.18rem 0;
+        }
+        body.density-compact .result-box.lembar-hitung .result-footnote {
+            margin-top: 0.4rem;
+            padding-top: 0.3rem;
+            font-size: 0.7rem;
+        }
+        body.density-compact .table-buku-masa thead th,
+        body.density-compact .table-buku-masa tbody td {
+            padding: 0.42rem 0.55rem;
+            font-size: 0.8rem;
+        }
+        body.density-compact .table-buku-masa .col-sticky {
+            min-width: 7.5rem;
+        }
+        body.density-compact .status-chip {
+            font-size: 0.66rem;
+            padding: 0.12rem 0.4rem;
+        }
         body.density-compact .empty-state {
             padding: 1.75rem 1rem;
         }
@@ -1380,6 +1427,51 @@
             .nav-tabs .nav-link { padding: 0.6rem 0.7rem; font-size: 0.85rem; }
             .cal-day { height: 56px; }
             .app-main { padding-top: 1rem; }
+        }
+
+
+        /* ── Print: lembar hitung as worksheet ── */
+        @media print {
+            .skip-link, .navbar, .footer, .skeleton, .density-toggle,
+            .nav-tools, .btn, .pagination, .modal, .alert-reminder,
+            .tax-desk-banner, .ops-rail, .action-grid, .period-toolbar,
+            #pageSkeleton, #darkModeToggle, #densityToggle {
+                display: none !important;
+            }
+            body, .app-shell {
+                background: #fff !important;
+            }
+            .app-main {
+                max-width: none !important;
+                padding: 0 !important;
+            }
+            .result-box.lembar-hitung {
+                break-inside: avoid;
+                box-shadow: none !important;
+                border: 1px solid #333 !important;
+                border-left: 4px solid #333 !important;
+                background: #fff !important;
+                page-break-inside: avoid;
+            }
+            .result-box.lembar-hitung .result-title {
+                color: #000 !important;
+            }
+            .result-box.lembar-hitung .value-line.total {
+                border-top: 2px solid #000 !important;
+            }
+            .table-buku-masa {
+                break-inside: auto;
+            }
+            .table-buku-masa thead th {
+                position: static !important;
+                background: #eee !important;
+                color: #000 !important;
+            }
+            .table-buku-masa .col-sticky {
+                position: static !important;
+                box-shadow: none !important;
+            }
+            a[href]::after { content: ''; }
         }
 
         /* ── Accessibility ── */

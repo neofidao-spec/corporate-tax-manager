@@ -88,6 +88,7 @@ class TaxDB:
                 tariff_label TEXT DEFAULT '2%',
                 pph_amount REAL NOT NULL DEFAULT 0,
                 description TEXT,
+                remittance_status TEXT NOT NULL DEFAULT 'tercatat',
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
                 tax_year INTEGER NOT NULL DEFAULT (CAST(strftime('%Y', 'now') AS INTEGER)),
                 tax_month INTEGER NOT NULL DEFAULT (CAST(strftime('%m', 'now') AS INTEGER))
@@ -116,6 +117,7 @@ class TaxDB:
                 pph21_amount REAL NOT NULL,
                 period_year INTEGER NOT NULL,
                 period_month INTEGER NOT NULL,
+                remittance_status TEXT NOT NULL DEFAULT 'tercatat',
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
             )
             """,
@@ -135,6 +137,16 @@ class TaxDB:
 
         for stmt in tables:
             cursor.execute(stmt)
+
+        # Lightweight migrations for remittance status (safe on existing DBs)
+        for table in ('withholding', 'pph21_log'):
+            cursor.execute(f'PRAGMA table_info({table})')
+            cols = {row[1] for row in cursor.fetchall()}
+            if 'remittance_status' not in cols:
+                cursor.execute(
+                    f"ALTER TABLE {table} ADD COLUMN remittance_status "
+                    f"TEXT NOT NULL DEFAULT 'tercatat'"
+                )
 
         # Seed default tax reminders if empty
         cursor.execute("SELECT COUNT(*) FROM tax_reminders")
@@ -243,7 +255,9 @@ class TaxDB:
         # Data
         cursor.execute(f"""
             SELECT id, vendor, amount, obj_type, tax_code, tariff_label, pph_amount,
-                   COALESCE(description,'') as description, created_at, tax_year, tax_month
+                   COALESCE(description,'') as description,
+                   COALESCE(remittance_status, 'tercatat') as remittance_status,
+                   created_at, tax_year, tax_month
             FROM withholding {where}
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -405,7 +419,9 @@ class TaxDB:
         total = cursor.fetchone()[0]
         cursor.execute(f"""
             SELECT id, employee_name, gross_salary, dependents, ptkp_status,
-                   pph21_amount, period_year, period_month, created_at
+                   pph21_amount, period_year, period_month,
+                   COALESCE(remittance_status, 'tercatat') as remittance_status,
+                   created_at
             FROM pph21_log {where}
             ORDER BY created_at DESC LIMIT ? OFFSET ?
         """, params + [limit, offset])
@@ -442,6 +458,83 @@ class TaxDB:
     # ═══════════════════════════════════════════════════════
     # DOCUMENTS
     # ═══════════════════════════════════════════════════════
+
+
+    def _normalize_remittance_status(self, status: str) -> str:
+        allowed = {'tercatat', 'disetor'}
+        value = (status or 'tercatat').strip().lower()
+        if value not in allowed:
+            raise ValueError('Status setor harus tercatat atau disetor')
+        return value
+
+    def set_withholding_remittance(self, record_id: int, status: str) -> bool:
+        status = self._normalize_remittance_status(status)
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE withholding SET remittance_status = ? WHERE id = ?',
+            (status, int(record_id)),
+        )
+        ok = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return ok
+
+    def toggle_withholding_remittance(self, record_id: int) -> str:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COALESCE(remittance_status, 'tercatat') FROM withholding WHERE id = ?",
+            (int(record_id),),
+        )
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise ValueError('Data potongan tidak ditemukan')
+        current = (row[0] or 'tercatat').lower()
+        nxt = 'disetor' if current != 'disetor' else 'tercatat'
+        cursor.execute(
+            'UPDATE withholding SET remittance_status = ? WHERE id = ?',
+            (nxt, int(record_id)),
+        )
+        conn.commit()
+        conn.close()
+        return nxt
+
+    def set_pph21_remittance(self, record_id: int, status: str) -> bool:
+        status = self._normalize_remittance_status(status)
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE pph21_log SET remittance_status = ? WHERE id = ?',
+            (status, int(record_id)),
+        )
+        ok = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return ok
+
+    def toggle_pph21_remittance(self, record_id: int) -> str:
+        conn = self._conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COALESCE(remittance_status, 'tercatat') FROM pph21_log WHERE id = ?",
+            (int(record_id),),
+        )
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise ValueError('Data PPh 21 tidak ditemukan')
+        current = (row[0] or 'tercatat').lower()
+        nxt = 'disetor' if current != 'disetor' else 'tercatat'
+        cursor.execute(
+            'UPDATE pph21_log SET remittance_status = ? WHERE id = ?',
+            (nxt, int(record_id)),
+        )
+        conn.commit()
+        conn.close()
+        return nxt
+
 
     def add_document(self, title: str, category: str = 'Umum',
                      status: str = 'Lengkap', tax_year: Optional[int] = None,

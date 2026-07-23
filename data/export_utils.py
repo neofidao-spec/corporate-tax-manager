@@ -45,9 +45,10 @@ def default_export_filename(prefix: str = 'export', when: Optional[date] = None)
 def pph21_csv_rows(records: Iterable[Dict[str, Any]]) -> List[List[Any]]:
     rows: List[List[Any]] = [[
         'ID', 'Pegawai', 'Gaji Bruto', 'Tanggungan', 'PTKP',
-        'PPh 21', 'Tahun', 'Bulan', 'Tgl Input',
+        'PPh 21', 'Status Setor', 'Tahun', 'Bulan', 'Tgl Input',
     ]]
     for r in records:
+        st = (r.get('remittance_status') or 'tercatat')
         rows.append([
             r.get('id'),
             r.get('employee_name'),
@@ -55,6 +56,7 @@ def pph21_csv_rows(records: Iterable[Dict[str, Any]]) -> List[List[Any]]:
             r.get('dependents'),
             r.get('ptkp_status'),
             r.get('pph21_amount'),
+            'Disetor' if str(st).lower() == 'disetor' else 'Tercatat',
             r.get('period_year'),
             r.get('period_month'),
             r.get('created_at'),
@@ -65,9 +67,10 @@ def pph21_csv_rows(records: Iterable[Dict[str, Any]]) -> List[List[Any]]:
 def withholding_csv_rows(records: Iterable[Dict[str, Any]]) -> List[List[Any]]:
     rows: List[List[Any]] = [[
         'ID', 'Vendor', 'Jumlah Bruto', 'Jenis Objek', 'Jenis Pajak',
-        'Tarif', 'PPh', 'Deskripsi', 'Tgl Input', 'Tahun', 'Bulan',
+        'Tarif', 'PPh', 'Status Setor', 'Deskripsi', 'Tgl Input', 'Tahun', 'Bulan',
     ]]
     for r in records:
+        st = (r.get('remittance_status') or 'tercatat')
         rows.append([
             r.get('id'),
             r.get('vendor'),
@@ -76,6 +79,7 @@ def withholding_csv_rows(records: Iterable[Dict[str, Any]]) -> List[List[Any]]:
             r.get('tax_code'),
             r.get('tariff_label'),
             r.get('pph_amount'),
+            'Disetor' if str(st).lower() == 'disetor' else 'Tercatat',
             r.get('description'),
             r.get('created_at'),
             r.get('tax_year'),

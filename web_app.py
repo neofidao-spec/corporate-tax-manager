@@ -281,6 +281,22 @@ def create_app(testing=False):
         flash('Data dihapus', 'success')
         return redirect(url_for('withholding'))
 
+    @app.route('/withholding/<int:rid>/remit', methods=['POST'])
+    def toggle_withholding_remit(rid):
+        try:
+            nxt = g.db.toggle_withholding_remittance(rid)
+            label = 'Disetor' if nxt == 'disetor' else 'Tercatat'
+            flash(f'Status potongan diubah ke {label}', 'success')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal mengubah status setor: {e}', 'error')
+        # preserve filters when possible
+        year = request.form.get('year') or request.args.get('year')
+        month = request.form.get('month') or request.args.get('month')
+        tax_code = request.form.get('tax_code') or request.args.get('tax_code')
+        return redirect(url_for('withholding', year=year, month=month, tax_code=tax_code))
+
     # ══════════════════════════════════════════════════
     # ROUTES: PPh 21 Log (payroll)
     # ══════════════════════════════════════════════════
@@ -359,6 +375,21 @@ def create_app(testing=False):
         except Exception as e:
             flash(f'Gagal menghapus: {e}', 'error')
         return redirect(url_for('pph21_log'))
+
+    @app.route('/pph21/<int:rid>/remit', methods=['POST'])
+    def toggle_pph21_remit(rid):
+        try:
+            nxt = g.db.toggle_pph21_remittance(rid)
+            label = 'Disetor' if nxt == 'disetor' else 'Tercatat'
+            flash(f'Status PPh 21 diubah ke {label}', 'success')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Gagal mengubah status setor: {e}', 'error')
+        year = request.form.get('year') or request.args.get('year')
+        month = request.form.get('month') or request.args.get('month')
+        q = request.form.get('q') or request.args.get('q')
+        return redirect(url_for('pph21_log', year=year, month=month, q=q))
 
     @app.route('/pph21/export')
     def export_pph21():

@@ -103,7 +103,20 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="col-status"><span class="status-chip posted">Tercatat</span></td>
+                        <td class="col-status">
+                            {% set st = (r.remittance_status or 'tercatat')|lower %}
+                            <form method="POST" action="/withholding/{{ r.id }}/remit" class="d-inline">
+                                {% if year %}<input type="hidden" name="year" value="{{ year }}">{% endif %}
+                                {% if month %}<input type="hidden" name="month" value="{{ month }}">{% endif %}
+                                {% if tax_code %}<input type="hidden" name="tax_code" value="{{ tax_code }}">{% endif %}
+                                <button type="submit" class="remit-toggle" title="Klik untuk ubah status setor"
+                                        aria-label="Ubah status setor {{ r.vendor }}">
+                                    <span class="status-chip {{ 'disetor' if st == 'disetor' else 'tercatat' }}">
+                                        {{ 'Disetor' if st == 'disetor' else 'Tercatat' }}
+                                    </span>
+                                </button>
+                            </form>
+                        </td>
                         <td><small class="text-muted">{{ r.description[:40] if r.description else '-' }}</small></td>
                         <td><small class="text-muted">{{ r.created_at[:10] }}</small></td>
                         <td>
