@@ -48,7 +48,16 @@ def create_app(testing=False):
 
     @app.context_processor
     def inject_now():
-        return {'now': datetime.now(), 'today': date.today()}
+        ctx = {'now': datetime.now(), 'today': date.today()}
+        try:
+            db = TaxDB(app.config['DATABASE'])
+            ds = db.get_dashboard_data(year=date.today().year, month=date.today().month)
+            ctx['nav_doc_count'] = ds.get('doc_count', 0) or 0
+            ctx['nav_outstanding'] = ds.get('outstanding_count', 0) or 0
+        except Exception:
+            ctx['nav_doc_count'] = 0
+            ctx['nav_outstanding'] = 0
+        return ctx
 
     # ══════════════════════════════════════════════════
     # ROUTES: Dashboard

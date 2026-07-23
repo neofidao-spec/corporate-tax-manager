@@ -571,6 +571,10 @@
             padding: var(--space-2) var(--space-3) !important;
             border-radius: var(--radius-sm);
             transition: background var(--transition-fast), color var(--transition-fast);
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
         .navbar .nav-link:hover {
             color: var(--text) !important;
@@ -581,8 +585,42 @@
             background: var(--primary-soft);
             font-weight: var(--weight-semibold);
         }
-        .navbar .nav-link i { margin-right: 6px; }
-        .navbar-toggler { border: 1px solid var(--border); }
+        .navbar .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            border-radius: 0 3px 3px 0;
+            background: var(--accent);
+        }
+        .navbar .nav-link i { font-size: 1.1em; }
+        .navbar .nav-link .nav-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 999px;
+            font-size: 0.65rem;
+            font-weight: var(--weight-bold);
+            background: var(--danger-soft);
+            color: var(--danger-text);
+            border: 1px solid #F3C4C0;
+            line-height: 1;
+        }
+        .navbar .nav-link .nav-badge.urgent {
+            background: var(--danger-soft);
+            color: var(--danger-text);
+        }
+        .navbar .nav-link .nav-badge.info {
+            background: var(--primary-soft);
+            color: var(--primary);
+            border-color: #D5E0EC;
+        }
         .navbar-toggler i { color: var(--text); font-size: 1.35rem; }
 
         /* ── Cards ── */
@@ -1636,49 +1674,52 @@
                         <a class="nav-link {% if request.path == '/' %}active{% endif %}"
                            href="/"
                            {% if request.path == '/' %}aria-current="page"{% endif %}>
-                            Beranda
+                            <i class="bi bi-house" aria-hidden="true"></i> Beranda
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/calculator') %}active{% endif %}"
                            href="/calculator"
                            {% if request.path.startswith('/calculator') %}aria-current="page"{% endif %}>
-                            Kalkulator
+                            <i class="bi bi-calculator" aria-hidden="true"></i> Kalkulator
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/withholding') %}active{% endif %}"
                            href="/withholding"
                            {% if request.path.startswith('/withholding') %}aria-current="page"{% endif %}>
-                            PPh 23/26
+                            <i class="bi bi-receipt" aria-hidden="true"></i> PPh 23/26
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/pph21') %}active{% endif %}"
                            href="/pph21"
                            {% if request.path.startswith('/pph21') %}aria-current="page"{% endif %}>
-                            PPh 21
+                            <i class="bi bi-people" aria-hidden="true"></i> PPh 21
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}"
                            href="/reports/period"
                            {% if request.path.startswith('/reports') %}aria-current="page"{% endif %}>
-                            Laporan
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i> Laporan
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item position-relative">
                         <a class="nav-link {% if request.path.startswith('/documents') %}active{% endif %}"
                            href="/documents"
                            {% if request.path.startswith('/documents') %}aria-current="page"{% endif %}>
-                            Dokumen
+                            <i class="bi bi-folder2" aria-hidden="true"></i> Dokumen
+                            {% if nav_doc_count and nav_doc_count > 0 %}
+                            <span class="nav-badge info">{{ nav_doc_count }}</span>
+                            {% endif %}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path.startswith('/calendar') %}active{% endif %}"
                            href="/calendar"
                            {% if request.path.startswith('/calendar') %}aria-current="page"{% endif %}>
-                            Kalender
+                            <i class="bi bi-calendar3" aria-hidden="true"></i> Kalender
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2">
